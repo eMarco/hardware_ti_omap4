@@ -429,6 +429,7 @@ bool bLogSysLinkTrace = true;
 bool stressTest = false;
 bool stopScript = false;
 int restartCount = 0;
+bool firstTime = true;
 
 static const String16 processName("camera_test");
 
@@ -1032,9 +1033,11 @@ int openCamera() {
         }
     }
 
-    params = camera->getParameters();
+    if ( firstTime ) {
+        params = camera->getParameters();
+        firstTime = false;
+    }
     camera->setParameters(params.flatten());
-
     camera->setListener(new CameraHandler());
 
     hardwareActive = true;
