@@ -260,7 +260,6 @@ static OMX_ERRORTYPE ComponentPrivateDeInit(OMX_IN OMX_HANDLETYPE hComponent)
                 OMX_ErrorInsufficientResources, "Mutex release failed");
         }
 #endif
-
         OMX_CameraVtcFreeMemory(hComponent);
 
 
@@ -275,6 +274,7 @@ static OMX_ERRORTYPE ComponentPrivateDeInit(OMX_IN OMX_HANDLETYPE hComponent)
                 pCamPrv->gComponentBufferAllocation[i][j] = NULL;
             }
         }
+
 
         TIMM_OSAL_Free(pCompPrv->pCompProxyPrv);
         pCompPrv->pCompProxyPrv = NULL;
@@ -593,7 +593,6 @@ OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
                 pCamPrv->gComponentBufferAllocation[i][j] = NULL;
             }
         }
-
 	pHandle->ComponentDeInit = ComponentPrivateDeInit;
 	pHandle->GetConfig = CameraGetConfig;
 	pHandle->SetConfig = CameraSetConfig;
