@@ -388,8 +388,11 @@ status_t OMXCameraAdapter::setParameters3A(const android::CameraParameters &para
     }
 
 // TI extensions for enable/disable algos
+#ifndef OMAP_TUNA
     declareParameter3ABool(params, TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA,
                        mParameters3A.AlgoExternalGamma, SetAlgoExternalGamma, "External Gamma");
+    declareParameter3ABool(params, TICameraParameters::KEY_ALGO_FIXED_GAMMA,
+                       mParameters3A.AlgoFixedGamma, SetAlgoFixedGamma, "Fixed Gamma");
     declareParameter3ABool(params, TICameraParameters::KEY_ALGO_NSF1,
                        mParameters3A.AlgoNSF1, SetAlgoNSF1, "NSF1");
     declareParameter3ABool(params, TICameraParameters::KEY_ALGO_NSF2,
@@ -399,6 +402,7 @@ status_t OMXCameraAdapter::setParameters3A(const android::CameraParameters &para
     declareParameter3ABool(params, TICameraParameters::KEY_ALGO_THREELINCOLORMAP,
                        mParameters3A.AlgoThreeLinColorMap, SetAlgoThreeLinColorMap, "ThreeLinColorMap");
     declareParameter3ABool(params, TICameraParameters::KEY_ALGO_GIC, mParameters3A.AlgoGIC, SetAlgoGIC, "GIC");
+#endif
 
     // Gamma table
     str = params.get(TICameraParameters::KEY_GAMMA_TABLE);
