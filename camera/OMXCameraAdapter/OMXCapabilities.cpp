@@ -2248,7 +2248,9 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("tPreviewResRange.nHeightMin = %d", int(caps.tPreviewResRange.nHeightMin));
     CAMHAL_LOGD("tPreviewResRange.nWidthMax  = %d", int(caps.tPreviewResRange.nWidthMax));
     CAMHAL_LOGD("tPreviewResRange.nHeightMax = %d", int(caps.tPreviewResRange.nHeightMax));
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("tPreviewResRange.nMaxResInPixels = %d", int(caps.tPreviewResRange.nMaxResInPixels));
+#endif
 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("tRotatedPreviewResRange.nWidthMin  = %d", int(caps.tRotatedPreviewResRange.nWidthMin));
@@ -2262,14 +2264,18 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("tImageResRange.nHeightMin = %d", int(caps.tImageResRange.nHeightMin));
     CAMHAL_LOGD("tImageResRange.nWidthMax  = %d", int(caps.tImageResRange.nWidthMax));
     CAMHAL_LOGD("tImageResRange.nHeightMax = %d", int(caps.tImageResRange.nHeightMax));
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("tImageResRange.nMaxResInPixels = %d", int(caps.tImageResRange.nMaxResInPixels));
+#endif
 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("tThumbResRange.nWidthMin  = %d", int(caps.tThumbResRange.nWidthMin));
     CAMHAL_LOGD("tThumbResRange.nHeightMin = %d", int(caps.tThumbResRange.nHeightMin));
     CAMHAL_LOGD("tThumbResRange.nWidthMax  = %d", int(caps.tThumbResRange.nWidthMax));
     CAMHAL_LOGD("tThumbResRange.nHeightMax = %d", int(caps.tThumbResRange.nHeightMax));
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("tThumbResRange.nMaxResInPixels = %d", int(caps.tThumbResRange.nMaxResInPixels));
+#endif
 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("ulWhiteBalanceCount = %d", int(caps.ulWhiteBalanceCount));
@@ -2344,9 +2350,11 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("tSenMounting.nSenId    = %d", int(caps.tSenMounting.nSenId));
     CAMHAL_LOGD("tSenMounting.nRotation = %d", int(caps.tSenMounting.nRotation));
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("tSenMounting.bMirror   = %d", int(caps.tSenMounting.bMirror));
     CAMHAL_LOGD("tSenMounting.bFlip     = %d", int(caps.tSenMounting.bFlip));
     CAMHAL_LOGD("tSenMounting.eFacing   = %d", int(caps.tSenMounting.eFacing));
+#endif
 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("ulAutoConvModesCount = %d", int(caps.ulAutoConvModesCount));
@@ -2361,6 +2369,7 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("bGbceSupported    = %d", int(caps.bGbceSupported));
     CAMHAL_LOGD("bRawJpegSupported = %d", int(caps.bRawJpegSupported));
+#endif
 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("ulImageCodingFormatCount = %d", int(caps.ulImageCodingFormatCount));
@@ -2387,6 +2396,7 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     for ( int i = 0; i < int(caps.ulCapFrameLayoutCount); ++i )
         CAMHAL_LOGD("  eCapFrameLayout[%2d] = %d", i, int(caps.eCapFrameLayout[i]));
 
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("");
     CAMHAL_LOGD("bVideoNoiseFilterSupported         = %d", int(caps.bVideoNoiseFilterSupported      ));
     CAMHAL_LOGD("bVideoStabilizationSupported       = %d", int(caps.bVideoStabilizationSupported    ));
@@ -2395,7 +2405,9 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("bFacePrioritySupported             = %d", int(caps.bFacePrioritySupported          ));
     CAMHAL_LOGD("bRegionPrioritySupported           = %d", int(caps.bRegionPrioritySupported        ));
     CAMHAL_LOGD("bGlbceSupported                    = %d", int(caps.bGlbceSupported));
+#endif
 
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("");
     CAMHAL_LOGD("nManualConvMin     = %d", int(caps.nManualConvMin     ));
     CAMHAL_LOGD("nManualConvMax     = %d", int(caps.nManualConvMax     ));
@@ -2409,6 +2421,7 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("nSharpnessMax      = %d", int(caps.nSharpnessMax      ));
     CAMHAL_LOGD("nSaturationMin     = %d", int(caps.nSaturationMin     ));
     CAMHAL_LOGD("nSaturationMax     = %d", int(caps.nSaturationMax     ));
+#endif
 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("------------------- end of dump -------------------");
@@ -2479,7 +2492,9 @@ status_t OMXCameraAdapter::getCaps(const int sensorId, CameraProperties::Propert
     }
 
     CAMHAL_LOGDB("sen mount id=%u", (unsigned int)caps->tSenMounting.nSenId);
+#ifndef OMAP_TUNA
     CAMHAL_LOGDB("facing id=%u", (unsigned int)caps->tSenMounting.eFacing);
+#endif
 
  EXIT:
     if (bufferlist) {
