@@ -4350,6 +4350,7 @@ public:
         }
 
         status_t err = NO_ERROR;
+#ifndef OMAP_TUNA
         if ( sensorId == 2 ) {
             CAMHAL_LOGD("Camera mode: STEREO");
             properties->setMode(MODE_STEREO);
@@ -4357,6 +4358,7 @@ public:
                                           sensorId,
                                           properties);
         } else {
+#endif
             CAMHAL_LOGD("Camera MONO");
 
             CAMHAL_LOGD("Camera mode: HQ ");
@@ -4407,7 +4409,6 @@ public:
 #endif
 
 #ifdef CAMERAHAL_OMAP5_CAPTURE_MODES
-
             CAMHAL_LOGD("Camera mode: VIDEO HQ ");
             properties->setMode(MODE_VIDEO_HIGH_QUALITY);
             err = fetchCapabiltiesForMode(OMX_CaptureHighQualityVideo,

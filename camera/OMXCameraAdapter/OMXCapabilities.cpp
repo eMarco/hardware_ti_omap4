@@ -1785,6 +1785,7 @@ status_t OMXCameraAdapter::insertCaptureModes(CameraProperties::Properties* para
     return ret;
 }
 
+#ifndef OMAP_TUNA
 status_t OMXCameraAdapter::insertLayout(CameraProperties::Properties* params, OMX_TI_CAPTYPE &caps)
 {
     status_t ret = NO_ERROR;
@@ -1822,6 +1823,7 @@ status_t OMXCameraAdapter::insertLayout(CameraProperties::Properties* params, OM
 
     return ret;
 }
+#endif
 
 status_t OMXCameraAdapter::insertVideoSnapshotSupported(CameraProperties::Properties* params, OMX_TI_CAPTYPE &caps)
 {
@@ -1891,6 +1893,7 @@ status_t OMXCameraAdapter::insertDefaults(CameraProperties::Properties* params, 
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     /* If default is supported - set it, else - set first supported */
     if (strstr(params->get(CameraProperties::S3D_PRV_FRAME_LAYOUT_VALUES), DEFAULT_S3D_PREVIEW_LAYOUT)) {
         strncpy(temp, DEFAULT_S3D_PREVIEW_LAYOUT, MAX_PROP_VALUE_LENGTH - 1);
@@ -1902,6 +1905,7 @@ status_t OMXCameraAdapter::insertDefaults(CameraProperties::Properties* params, 
         }
     }
     params->set(CameraProperties::S3D_PRV_FRAME_LAYOUT, temp);
+#endif
 
     if (!strcmp(TICameraParameters::S3D_TB_FULL, temp)) {
         params->set(CameraProperties::SUPPORTED_PREVIEW_SIZES, params->get(CameraProperties::SUPPORTED_PREVIEW_TOPBOTTOM_SIZES));
@@ -1912,6 +1916,7 @@ status_t OMXCameraAdapter::insertDefaults(CameraProperties::Properties* params, 
         params->set(CameraProperties::SUPPORTED_PREVIEW_SIZES, params->get(CameraProperties::SUPPORTED_PREVIEW_SUBSAMPLED_SIZES));
     }
 
+#ifndef OMAP_TUNA
     /* If default is supported - set it, else - set first supported */
     if (strstr(params->get(CameraProperties::S3D_CAP_FRAME_LAYOUT_VALUES), DEFAULT_S3D_PICTURE_LAYOUT)) {
         strncpy(temp, DEFAULT_S3D_PICTURE_LAYOUT, MAX_PROP_VALUE_LENGTH - 1);
@@ -1923,6 +1928,7 @@ status_t OMXCameraAdapter::insertDefaults(CameraProperties::Properties* params, 
         }
     }
     params->set(CameraProperties::S3D_CAP_FRAME_LAYOUT, temp);
+#endif
 
     if (!strcmp(TICameraParameters::S3D_TB_FULL, temp)) {
         params->set(CameraProperties::SUPPORTED_PICTURE_SIZES, params->get(CameraProperties::SUPPORTED_PICTURE_TOPBOTTOM_SIZES));
@@ -1959,6 +1965,7 @@ status_t OMXCameraAdapter::insertDefaults(CameraProperties::Properties* params, 
     params->set(CameraProperties::JPEG_THUMBNAIL_SIZE, DEFAULT_THUMBNAIL_SIZE);
     params->set(CameraProperties::PICTURE_FORMAT, DEFAULT_PICTURE_FORMAT);
 
+#ifndef OMAP_TUNA
     if (!strcmp(params->get(CameraProperties::S3D_CAP_FRAME_LAYOUT),
                 TICameraParameters::S3D_TB_FULL)) {
         params->set(CameraProperties::PICTURE_SIZE, DEFAULT_PICTURE_TB_SIZE);
@@ -1978,6 +1985,7 @@ status_t OMXCameraAdapter::insertDefaults(CameraProperties::Properties* params, 
     } else {
         params->set(CameraProperties::PREVIEW_SIZE, DEFAULT_PREVIEW_SIZE);
     }
+#endif
 
     params->set(CameraProperties::PREVIEW_FORMAT, DEFAULT_PREVIEW_FORMAT);
 
@@ -2168,9 +2176,11 @@ status_t OMXCameraAdapter::insertCapabilities(CameraProperties::Properties* para
         ret = insertCaptureModes(params, caps);
     }
 
+#ifndef OMAP_TUNA
     if ( NO_ERROR == ret) {
         ret = insertLayout(params, caps);
     }
+#endif
 
     if ( NO_ERROR == ret) {
         ret = insertVideoSnapshotSupported(params, caps);
