@@ -53,7 +53,9 @@ enum OperatingMode {
     MODE_HIGH_QUALITY,
     MODE_ZEROSHUTTERLAG,
     MODE_VIDEO,
+#ifndef OMAP_TUNA
     MODE_STEREO,
+#endif
     MODE_CPCAM,
     MODE_VIDEO_HIGH_QUALITY,
     MODE_MAX
@@ -156,10 +158,12 @@ public:
 
     static const char PARAMS_DELIMITER [];
 
+#ifndef OMAP_TUNA
     static const char S3D_PRV_FRAME_LAYOUT[];
     static const char S3D_PRV_FRAME_LAYOUT_VALUES[];
     static const char S3D_CAP_FRAME_LAYOUT[];
     static const char S3D_CAP_FRAME_LAYOUT_VALUES[];
+#endif
     static const char VSTAB[];
     static const char VSTAB_SUPPORTED[];
     static const char VNF[];
