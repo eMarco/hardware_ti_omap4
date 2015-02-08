@@ -16,7 +16,7 @@ LOCAL_C_INCLUDES += \
 	$(HARDWARE_TI_OMAP4_BASE)/syslink/syslink/d2c \
 	$(HARDWARE_TI_OMAP4_BASE)/syslink/syslink/api/include
 
-LOCAL_CFLAGS += -D_Android
+LOCAL_CFLAGS += -D_Android -fno-strict-aliasing
 
 LOCAL_SHARED_LIBRARIES := \
 	libOMX_CoreOsal \
