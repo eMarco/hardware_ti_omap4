@@ -16,7 +16,7 @@
 # all OMAP4 devices.
 
 PRODUCT_PACKAGES += \
-    hwcomposer.omap4
+    hwcomposer.$(TARGET_BOOTLOADER_BOARD_NAME)
 
 PRODUCT_VENDOR_KERNEL_HEADERS := hardware/ti/omap4-next/kernel-headers
 
