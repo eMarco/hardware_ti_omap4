@@ -17,6 +17,10 @@ LOCAL_CFLAGS := -DLOG_TAG=\"ti_hwc\"
 LOCAL_CFLAGS += -fno-strict-aliasing
 LOCAL_C_INCLUDES += external/libpng external/zlib
 
+ifeq ($(TARGET_TI_HWC_HDMI_DISABLED),true)
+    LOCAL_CFLAGS += -DHDMI_DISABLED
+endif
+
 LOCAL_C_INCLUDES += \
     $(LOCAL_PATH)/../edid/inc \
     $(LOCAL_PATH)/../include
