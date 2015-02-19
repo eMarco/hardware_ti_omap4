@@ -108,6 +108,7 @@ const CapResolution OMXCameraAdapter::mImageCapResSS [] = {
    { 2048*2, 1536, "4096x1536" },
    { 1600*2, 1200, "3200x1200" },
    { 1280*2,  960, "2560x960" },
+   { 1280*2,  720, "2560x720" },
    { 1024*2,  768, "2048x768" },
    {  640*2,  480, "1280x480" },
    {  320*2,  240, "640x240" },
@@ -121,6 +122,7 @@ const CapResolution OMXCameraAdapter::mImageCapResTB [] = {
    { 2048, 1536*2, "2048x3072" },
    { 1600, 1200*2, "1600x2400" },
    { 1280,  960*2, "1280x1920" },
+   { 1280,  720*2, "1280x1440" },
    { 1024,  768*2, "1024x1536" },
    {  640,  480*2, "640x960" },
    {  320,  240*2, "320x480" },
@@ -1067,10 +1069,17 @@ status_t OMXCameraAdapter::insertFramerates(CameraProperties::Properties* params
     {
         android::Vector<FpsRange> fpsRanges;
 
-        const int minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE,
-                androidFromDucatiFrameRate(caps.xFramerateMin));
-        const int maxFrameRate = min<int>(FPS_MAX * CameraHal::VFR_SCALE,
-                androidFromDucatiFrameRate(caps.xFramerateMax));
+	// HASH: Fix JEM Amazon Ducati xFramerates which are [1 .. 30] vs [256 .. 7680]
+        int minFrameRate = -1;
+	if (caps.xFramerateMin >= 50)
+		minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMin));
+	else
+		minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMin << 8));
+        int maxFrameRate = -1;
+	if (caps.xFramerateMax >= 50)
+		maxFrameRate = min<int>(FPS_MAX * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMax));
+	else
+		maxFrameRate = min<int>(FPS_MAX * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMax << 8));
 
         if ( minFrameRate > maxFrameRate ) {
             CAMHAL_LOGE("Invalid frame rate range: [%d .. %d]", caps.xFramerateMin, caps.xFramerateMax);
@@ -1131,10 +1140,17 @@ status_t OMXCameraAdapter::insertFramerates(CameraProperties::Properties* params
     {
         android::Vector<FpsRange> fpsRanges;
 
-        const int minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE,
-                androidFromDucatiFrameRate(caps.xFramerateMin));
-        const int maxFrameRate = min<int>(FPS_MAX_EXTENDED * CameraHal::VFR_SCALE,
-                androidFromDucatiFrameRate(caps.xFramerateMax));
+	// HASH: Fix JEM Amazon Ducati xFramerates which are [1 .. 30] vs [256 .. 7680]
+        int minFrameRate = -1;
+	if (caps.xFramerateMin >= 50)
+		minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMin));
+	else
+		minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMin << 8));
+        int maxFrameRate = -1;
+	if (caps.xFramerateMax >= 50)
+		maxFrameRate = min<int>(FPS_MAX_EXTENDED * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMax));
+	else
+		maxFrameRate = min<int>(FPS_MAX_EXTENDED * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMax << 8));
 
         encodeFrameRates(minFrameRate, maxFrameRate, caps, mFramerates, ARRAY_SIZE(mFramerates), fpsRanges);
 
