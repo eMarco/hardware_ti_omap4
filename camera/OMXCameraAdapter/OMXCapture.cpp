@@ -43,13 +43,15 @@ status_t OMXCameraAdapter::setParametersCapture(const android::CameraParameters 
     bool inCaptureState = false;
 
     LOG_FUNCTION_NAME;
-
+    
     OMXCameraPortParameters *cap;
     cap = &mCameraAdapterParameters.mCameraPortParams[mCameraAdapterParameters.mImagePortIndex];
 
     capFrmLayout = cap->mFrameLayoutType;
+#ifndef OMAP_TUNA
     setParamS3D(mCameraAdapterParameters.mImagePortIndex,
         params.get(TICameraParameters::KEY_S3D_CAP_FRAME_LAYOUT));
+#endif
     if (capFrmLayout != cap->mFrameLayoutType) {
         mPendingCaptureSettings |= SetFormat;
     }
@@ -170,21 +172,29 @@ status_t OMXCameraAdapter::setParametersCapture(const android::CameraParameters 
         parseExpRange(str, mExposureBracketingValues, NULL,
                       mExposureGainBracketingModes,
                       EXP_BRACKET_RANGE, mExposureBracketingValidEntries);
+#ifndef OMAP_TUNA
         if (mCapMode == OMXCameraAdapter::CP_CAM) {
             mExposureBracketMode = OMX_BracketVectorShot;
         } else {
+#endif
             mExposureBracketMode = OMX_BracketExposureRelativeInEV;
+#ifndef OMAP_TUNA
         }
+#endif
         mPendingCaptureSettings |= SetBurstExpBracket;
     } else if ( (str = params.get(TICameraParameters::KEY_EXP_GAIN_BRACKETING_RANGE)) != NULL) {
         parseExpRange(str, mExposureBracketingValues, mExposureGainBracketingValues,
                       mExposureGainBracketingModes,
                       EXP_BRACKET_RANGE, mExposureBracketingValidEntries);
+#ifndef OMAP_TUNA
         if (mCapMode == OMXCameraAdapter::CP_CAM) {
             mExposureBracketMode = OMX_BracketVectorShot;
         } else {
+#endif
             mExposureBracketMode = OMX_BracketExposureGainAbsolute;
+#ifndef OMAP_TUNA
         }
+#endif
         mPendingCaptureSettings |= SetBurstExpBracket;
     } else {
         // always set queued shot config in CPCAM mode
@@ -526,11 +536,15 @@ status_t OMXCameraAdapter::doExposureBracketing(int *evValues,
     }
 
     if ( NO_ERROR == ret ) {
+#ifndef OMAP_TUNA
         if (bracketMode == OMX_BracketVectorShot) {
             ret = setVectorShot(evValues, evValues2, evModes2, evCount, frameCount, flush, bracketMode);
         } else {
+#endif
             ret = setExposureBracketing(evValues, evValues2, evCount, frameCount, bracketMode);
+#ifndef OMAP_TUNA
         }
+#endif
     }
 
     LOG_FUNCTION_NAME_EXIT;
@@ -538,6 +552,7 @@ status_t OMXCameraAdapter::doExposureBracketing(int *evValues,
     return ret;
 }
 
+#ifndef OMAP_TUNA
 status_t OMXCameraAdapter::setVectorStop(bool toPreview)
 {
     status_t ret = NO_ERROR;
@@ -753,6 +768,7 @@ status_t OMXCameraAdapter::setVectorShot(int *evValues,
 
     return (ret | Utils::ErrorUtils::omxToAndroidError(eError));
 }
+#endif
 
 status_t OMXCameraAdapter::setExposureBracketing(int *evValues,
                                                  int *evValues2,
@@ -816,13 +832,17 @@ status_t OMXCameraAdapter::setExposureBracketing(int *evValues,
 
         for ( unsigned int i = 0 ; i < evCount ; i++ )
             {
+#ifndef OMAP_TUNA
             if (bracketMode == OMX_BracketExposureGainAbsolute) {
                 extExpCapMode.tBracketConfigType.nBracketValues[i]  =  evValues[i];
                 extExpCapMode.tBracketConfigType.nBracketValues2[i]  =  evValues2[i];
             } else {
+#endif
                 // assuming OMX_BracketExposureRelativeInEV
                 extExpCapMode.tBracketConfigType.nBracketValues[i]  =  ( evValues[i] * ( 1 << Q16_OFFSET ) )  / 10;
+#ifndef OMAP_TUNA
             }
+#endif
             }
 
         eError =  OMX_SetConfig(mCameraAdapterParameters.mHandleComp,
@@ -1409,7 +1429,9 @@ status_t OMXCameraAdapter::stopImageCapture()
             }
             mStartCaptureSem.Create(0);
         }
-    } else if (CP_CAM == mCapMode) {
+    }
+#ifndef OMAP_TUNA
+else if (CP_CAM == mCapMode) {
         // Reset shot config queue
         OMX_TI_CONFIG_ENQUEUESHOTCONFIGS resetShotConfigs;
         OMX_INIT_STRUCT_PTR(&resetShotConfigs, OMX_TI_CONFIG_ENQUEUESHOTCONFIGS);
@@ -1427,6 +1449,7 @@ status_t OMXCameraAdapter::stopImageCapture()
             CAMHAL_LOGDA("Shot config reset successfully");
         }
     }
+#endif
 
     //Wait here for the capture to be done, in worst case timeout and proceed with cleanup
     mCaptureSem.WaitTimeout(OMX_CAPTURE_TIMEOUT);
@@ -1615,6 +1638,7 @@ status_t OMXCameraAdapter::initInternalBuffers(OMX_U32 portIndex)
 {
     OMX_ERRORTYPE eError = OMX_ErrorNone;
     int index = 0;
+#ifndef OMAP_TUNA
     OMX_TI_PARAM_USEBUFFERDESCRIPTOR bufferdesc;
 
     /* Indicate to Ducati that we're planning to use dynamically-mapped buffers */
@@ -1680,11 +1704,14 @@ status_t OMXCameraAdapter::initInternalBuffers(OMX_U32 portIndex)
     CAMHAL_LOGV("Ducati requested too many (>1) internal buffers");
 
     return -EINVAL;
+#endif
+    return NO_ERROR;
 }
 
 status_t OMXCameraAdapter::deinitInternalBuffers(OMX_U32 portIndex)
 {
     OMX_ERRORTYPE eError = OMX_ErrorNone;
+#ifndef OMAP_TUNA
     OMX_TI_PARAM_USEBUFFERDESCRIPTOR bufferdesc;
 
     OMX_INIT_STRUCT_PTR (&bufferdesc, OMX_TI_PARAM_USEBUFFERDESCRIPTOR);
@@ -1709,6 +1736,7 @@ status_t OMXCameraAdapter::deinitInternalBuffers(OMX_U32 portIndex)
     eError = OMX_SetParameter(mCameraAdapterParameters.mHandleComp,
             (OMX_INDEXTYPE) OMX_TI_IndexParamComponentBufferAllocation,
             &bufferalloc);
+#endif
     if (eError!=OMX_ErrorNone) {
         CAMHAL_LOGEB("OMX_SetParameter - %x", eError);
         return -EINVAL;
@@ -1885,15 +1913,18 @@ status_t OMXCameraAdapter::UseBuffersCapture(CameraBuffer * bufArr, int num)
         if (mNextState != LOADED_REPROCESS_CAPTURE_STATE) {
             // Enable WB and vector shot extra data for metadata
             setExtraData(true, mCameraAdapterParameters.mImagePortIndex, OMX_WhiteBalance);
+#ifndef OMAP_TUNA
             setExtraData(true, mCameraAdapterParameters.mImagePortIndex, OMX_TI_LSCTable);
+#endif
         }
+#ifndef OMAP_TUNA
 
         // CPCam mode only supports vector shot
         // Regular capture is not supported
         if ( (mCapMode == CP_CAM) && (mNextState != LOADED_REPROCESS_CAPTURE_STATE) ) {
             initVectorShot();
         }
-
+#endif
         mCaptureBuffersAvailable.clear();
         for (unsigned int i = 0; i < imgCaptureData->mMaxQueueable; i++ ) {
             mCaptureBuffersAvailable.add(&mCaptureBuffers[i], 0);
@@ -1904,6 +1935,7 @@ status_t OMXCameraAdapter::UseBuffersCapture(CameraBuffer * bufArr, int num)
         for (unsigned int i = imgCaptureData->mMaxQueueable; i < imgCaptureData->mNumBufs; i++ ) {
             mCaptureBuffersAvailable.add(&mCaptureBuffers[i], 1);
         }
+
     }
 
     if ( NO_ERROR == ret )
@@ -1914,7 +1946,7 @@ status_t OMXCameraAdapter::UseBuffersCapture(CameraBuffer * bufArr, int num)
             CAMHAL_LOGEB("Error configuring EXIF Buffer %x", ret);
             }
         }
-
+#ifndef OMAP_TUNA
     // Choose proper single preview mode for cp capture (reproc or hs)
     if (( NO_ERROR == ret) && (OMXCameraAdapter::CP_CAM == mCapMode)) {
         OMX_TI_CONFIG_SINGLEPREVIEWMODETYPE singlePrevMode;
@@ -1937,7 +1969,8 @@ status_t OMXCameraAdapter::UseBuffersCapture(CameraBuffer * bufArr, int num)
             CAMHAL_LOGDA("single preview mode configured successfully");
         }
     }
-
+#endif
+    
 #if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
 
     CameraHal::PPM("Takepicture extra configs on image port done: ", &bufArr->ppmStamp);
@@ -1960,7 +1993,9 @@ EXIT:
     // TODO: WA: if domx client disables VectShotInfo metadata on the image port, this causes
     // VectShotInfo to be disabled internally on preview port also. Remove setting in OMXCapture
     // setExtraData(false, mCameraAdapterParameters.mImagePortIndex, OMX_TI_VectShotInfo);
+#ifndef OMAP_TUNA
     setExtraData(false, mCameraAdapterParameters.mImagePortIndex, OMX_TI_LSCTable);
+#endif
     //Release image buffers
     if ( NULL != mReleaseImageBuffersCallback ) {
         mReleaseImageBuffersCallback(mReleaseData);

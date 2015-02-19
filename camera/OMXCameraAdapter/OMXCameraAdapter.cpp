@@ -131,7 +131,9 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
     mComponentState = OMX_StateLoaded;
 
     CAMHAL_LOGVB("OMX_GetHandle -0x%x sensor_index = %lu", eError, mSensorIndex);
+#ifndef OMAP_TUNA
     initDccFileDataSave(&mCameraAdapterParameters.mHandleComp, mCameraAdapterParameters.mPrevPortIndex);
+#endif
 
     eError = OMX_SendCommand(mCameraAdapterParameters.mHandleComp,
                                   OMX_CommandPortDisable,
@@ -525,6 +527,7 @@ EXIT:
     return (ret | Utils::ErrorUtils::omxToAndroidError(eError));
 }
 
+#ifndef OMAP_TUNA
 void OMXCameraAdapter::setParamS3D(OMX_U32 port, const char *valstr)
 {
     OMXCameraPortParameters *cap;
@@ -562,6 +565,7 @@ void OMXCameraAdapter::setParamS3D(OMX_U32 port, const char *valstr)
 
     LOG_FUNCTION_NAME_EXIT;
 }
+#endif
 
 status_t OMXCameraAdapter::setParameters(const android::CameraParameters &params)
 {
@@ -1020,7 +1024,7 @@ status_t OMXCameraAdapter::setupTunnel(uint32_t SliceHeight, uint32_t EncoderHan
         CAMHAL_LOGEB("OMX_SetParameter OMX_IndexParamPortDefinition Error- %x", eError);
     }
 
-#ifndef MOTOROLA_CAMERA
+#if !defined(MOTOROLA_CAMERA) && !defined(OMAP_TUNA)
     //Slice  Configuration
     OMX_TI_PARAM_VTCSLICE VTCSlice;
     OMX_INIT_STRUCT_PTR(&VTCSlice, OMX_TI_PARAM_VTCSLICE);
@@ -1035,6 +1039,7 @@ status_t OMXCameraAdapter::setupTunnel(uint32_t SliceHeight, uint32_t EncoderHan
         CAMHAL_LOGEB("OMX_SetParameter on OMX_TI_IndexParamVtcSlice returned error: 0x%x", eError);
         return BAD_VALUE;
     }
+#endif
 
     eError = OMX_SetupTunnel(mCameraAdapterParameters.mHandleComp,
             mCameraAdapterParameters.mVideoPortIndex, encoderHandle, 0);
@@ -1204,6 +1209,7 @@ status_t OMXCameraAdapter::setFormat(OMX_U32 port, OMXCameraPortParameters &port
         CAMHAL_LOGEB("Unsupported port index (%lu)", port);
     }
 
+#ifndef OMAP_TUNA
     if (( mSensorIndex == OMX_TI_StereoSensor ) && (OMX_CAMERA_PORT_VIDEO_OUT_VIDEO != port)) {
         ret = setS3DFrameLayout(port);
         if ( NO_ERROR != ret )
@@ -1212,6 +1218,7 @@ status_t OMXCameraAdapter::setFormat(OMX_U32 port, OMXCameraPortParameters &port
             return ret;
             }
         }
+#endif
 
     eError = OMX_SetParameter(mCameraAdapterParameters.mHandleComp,
             OMX_IndexParamPortDefinition, &portCheck);
@@ -2220,7 +2227,9 @@ status_t OMXCameraAdapter::startPreview()
     if ( OMX_ErrorNone == eError) {
         ret |= setExtraData(true, mCameraAdapterParameters.mPrevPortIndex, OMX_AncillaryData);
 #ifdef OMAP_ENHANCEMENT_CPCAM
+#ifndef OMAP_TUNA
         ret |= setExtraData(true, OMX_ALL, OMX_TI_VectShotInfo);
+#endif
 #endif
 #ifdef CAMERAHAL_OMX_PROFILING
         if ( UNLIKELY( mDebugProfile ) ) {
@@ -2655,6 +2664,7 @@ status_t OMXCameraAdapter::printComponentVersion(OMX_HANDLETYPE handle)
     return ret;
 }
 
+#ifndef OMAP_TUNA
 status_t OMXCameraAdapter::setS3DFrameLayout(OMX_U32 port) const
 {
     OMX_ERRORTYPE eError = OMX_ErrorNone;
@@ -2709,6 +2719,7 @@ status_t OMXCameraAdapter::setS3DFrameLayout(OMX_U32 port) const
 
     return NO_ERROR;
 }
+#endif
 
 status_t OMXCameraAdapter::autoFocus()
 {
@@ -3486,6 +3497,9 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
 
             if ( NULL != extraData ) {
                 ancillaryData = (OMX_TI_ANCILLARYDATATYPE*) extraData->data;
+#ifdef OMAP_TUNA
+                snapshotFrame = ancillaryData->nDCCStatus;
+#else
                 if ((OMX_2D_Snap == ancillaryData->eCameraView)
                     || (OMX_3D_Left_Snap == ancillaryData->eCameraView)
                     || (OMX_3D_Right_Snap == ancillaryData->eCameraView)) {
@@ -3493,6 +3507,7 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
                 } else {
                     snapshotFrame = OMX_FALSE;
                 }
+#endif
                 mPending3Asettings |= SetFocus;
             }
         }
@@ -3585,7 +3600,9 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
             }
         }
 
+#ifndef OMAP_TUNA
         sniffDccFileDataSave(pBuffHeader);
+#endif
 
         stat |= advanceZoom();
 
@@ -3871,8 +3888,8 @@ status_t OMXCameraAdapter::sendCallBacks(CameraFrame frame, OMX_IN OMX_BUFFERHEA
   frame.mOffset = pBuffHeader->nOffset;
   frame.mWidth = port->mWidth;
   frame.mHeight = port->mHeight;
-  frame.mYuv[0] = NULL;
-  frame.mYuv[1] = NULL;
+  frame.mYuv[0] = 0; //NULL;
+  frame.mYuv[1] = 0; //NULL;
 
   if ( onlyOnce && mRecording )
     {
@@ -4048,9 +4065,6 @@ status_t OMXCameraAdapter::setExtraData(bool enable, OMX_U32 nPortIndex, OMX_EXT
 
     extraDataControl.nPortIndex = nPortIndex;
     extraDataControl.eExtraDataType = eType;
-#ifdef OMAP_TUNA
-    extraDataControl.eCameraView = OMX_2D;
-#endif
 
     if (enable) {
         extraDataControl.bEnable = OMX_TRUE;
@@ -4145,7 +4159,9 @@ OMXCameraAdapter::OMXCameraAdapter(size_t sensor_index)
     // Initial values
     mTimeSourceDelta = 0;
     onlyOnce = true;
+#ifndef OMAP_TUNA
     mDccData.pData = NULL;
+#endif
 
     mInitSem.Create(0);
     mFlushSem.Create(0);
@@ -4193,9 +4209,12 @@ OMXCameraAdapter::~OMXCameraAdapter()
     switchToLoaded();
 
     if ( mOmxInitialized ) {
+
+#ifndef OMAP_TUNA
         saveDccFileDataSave();
 
         closeDccFileDataSave();
+#endif
         // deinit the OMX
         if ( mComponentState == OMX_StateLoaded || mComponentState == OMX_StateInvalid ) {
             // free the handle for the Camera component
@@ -4410,6 +4429,7 @@ public:
             }
 
 #ifdef OMAP_ENHANCEMENT_CPCAM
+#ifndef OMAP_TUNA
             CAMHAL_LOGD("Camera mode: CPCAM ");
             properties->setMode(MODE_CPCAM);
             err = fetchCapabiltiesForMode(OMX_TI_CPCam,
@@ -4419,7 +4439,9 @@ public:
                 return err;
             }
 #endif
+#endif
 
+#ifndef OMAP_TUNA
 #ifdef CAMERAHAL_OMAP5_CAPTURE_MODES
             CAMHAL_LOGD("Camera mode: VIDEO HQ ");
             properties->setMode(MODE_VIDEO_HIGH_QUALITY);
@@ -4433,7 +4455,7 @@ public:
 #endif
 
         }
-
+#endif
         return err;
     }
 

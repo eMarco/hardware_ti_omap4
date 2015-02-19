@@ -579,6 +579,7 @@ private:
                                 const OMX_BOOL data, const char *msg);
     status_t setParameter3ABoolInvert(const OMX_INDEXTYPE omx_idx,
                                       const OMX_BOOL data, const char *msg);
+#ifndef OMAP_TUNA
     status_t setAlgoExternalGamma(Gen3A_settings& Gen3A);
 #ifndef MOTOROLA_CAMERA
     status_t setAlgoNSF1(Gen3A_settings& Gen3A);
@@ -605,8 +606,10 @@ private:
     status_t set3ALock(OMX_BOOL toggleExp, OMX_BOOL toggleWb, OMX_BOOL toggleFocus);
 
     //Stereo 3D
+#ifndef OMAP_TUNA
     void setParamS3D(OMX_U32 port, const char *valstr);
     status_t setS3DFrameLayout(OMX_U32 port) const;
+#endif
 
     //API to set FrameRate using VFR interface
     status_t setVFramerate(OMX_U32 minFrameRate,OMX_U32 maxFrameRate);
@@ -703,7 +706,9 @@ private:
     static status_t insertDefaults(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertLocks(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertAreas(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
+#ifndef OMAP_TUNA
     static status_t insertMechanicalMisalignmentCorrection(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
+#endif
     static status_t insertCaptureModes(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertVideoSizes(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertFacing(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
@@ -728,10 +733,12 @@ private:
                                   BaseCameraAdapter::AdapterState state);
 
     //Exposure Bracketing
+#ifndef OMAP_TUNA
     status_t initVectorShot();
     status_t setVectorShot(int *evValues, int *evValues2, int *evModes2,
                            size_t evCount, size_t frameCount,
                            bool flush, OMX_BRACKETMODETYPE bracketMode);
+#endif
     status_t setVectorStop(bool toPreview = false);
     status_t setExposureBracketing(int *evValues, int *evValues2,
                                    size_t evCount, size_t frameCount,
@@ -783,6 +790,7 @@ private:
                                   camera_request_memory allocator) const;
 #endif
 
+#ifndef OMAP_TUNA
     // Mechanical Misalignment Correction
     status_t setMechanicalMisalignmentCorrection(bool enable);
 
@@ -794,6 +802,7 @@ private:
     status_t fseekDCCuseCasePos(FILE *pFile);
     FILE * fopenCameraDCC(const char *dccFolderPath);
     FILE * parseDCCsubDir(DIR *pDir, char *path);
+#endif
 
 #ifdef CAMERAHAL_OMX_PROFILING
     status_t storeProfilingData(OMX_BUFFERHEADERTYPE* pBuffHeader);
@@ -1242,8 +1251,10 @@ private:
 
     bool mSetFormatDone;
 
+#ifndef OMAP_TUNA
     OMX_TI_DCCDATATYPE mDccData;
     android::Mutex mDccDataLock;
+#endif
 
     int mMaxZoomSupported;
     android::Mutex mImageCaptureLock;

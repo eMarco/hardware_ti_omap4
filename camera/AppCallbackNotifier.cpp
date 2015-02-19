@@ -884,8 +884,8 @@ void AppCallbackNotifier::copyAndSendPreviewFrame(CameraFrame* frame, int32_t ms
                     memset(dest->mapped, 0, (mPreviewMemory->size / MAX_BUFFERS));
                 }
             } else {
-              if ((NULL == frame->mYuv[0]) || (NULL == frame->mYuv[1])){
-                CAMHAL_LOGEA("Error! One of the YUV Pointer is NULL");
+              if ((0 == frame->mYuv[0]) || (0 == frame->mYuv[1])){ //NULL == frame->mYuv
+                CAMHAL_LOGEA("Error! One of the YUV Pointer is 0"); //is NULL
                 goto exit;
               }
               else{

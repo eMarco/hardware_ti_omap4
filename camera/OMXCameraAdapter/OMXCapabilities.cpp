@@ -370,8 +370,8 @@ const CapU32 OMXCameraAdapter::mFacing [] = {
 #else
     { OMX_TI_SENFACING_BACK , TICameraParameters::FACING_BACK },
     { OMX_TI_SENFACING_FRONT, TICameraParameters::FACING_FRONT},
-};
 #endif
+};
 /*****************************************
  * internal static function declarations
  *****************************************/
@@ -610,8 +610,11 @@ status_t OMXCameraAdapter::encodeSizeCap3D(OMX_TI_CAPRESTYPE &res,
        if ( (cap[i].width <= res.nWidthMax) &&
             (cap[i].height <= res.nHeightMax) &&
             (cap[i].width >= res.nWidthMin) &&
-            (cap[i].height >= res.nHeightMin)  &&
-            (cap[i].width * cap[i].height <= res.nMaxResInPixels))  {
+            (cap[i].height >= res.nHeightMin)
+#ifndef OMAP_TUNA
+            && (cap[i].width * cap[i].height <= res.nMaxResInPixels)
+#endif
+                                                                 )  {
                if (buffer[0] != '\0') {
                    strncat(buffer, PARAM_SEP, bufferSize - 1);
                }
@@ -637,6 +640,7 @@ status_t OMXCameraAdapter::insertImageSizes(CameraProperties::Properties* params
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     for ( unsigned int i = 0 ; i < caps.ulCapFrameLayoutCount; i++ ) {
         if (caps.eCapFrameLayout[i] == OMX_TI_StereoFrameLayoutTopBottom)
         {
@@ -652,6 +656,7 @@ status_t OMXCameraAdapter::insertImageSizes(CameraProperties::Properties* params
             s3d_detected = 1;
         }
     }
+#endif
 
     memset(supported, '\0', MAX_PROP_VALUE_LENGTH);
 
@@ -755,6 +760,7 @@ status_t OMXCameraAdapter::insertPreviewSizes(CameraProperties::Properties* para
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     for ( unsigned int i = 0 ; i < caps.ulPrvFrameLayoutCount; i++ ) {
         if (caps.ePrvFrameLayout[i] == OMX_TI_StereoFrameLayoutTopBottom)
         {
@@ -770,6 +776,7 @@ status_t OMXCameraAdapter::insertPreviewSizes(CameraProperties::Properties* para
             s3d_detected = 1;
         }
     }
+#endif
 
     memset(supported, '\0', MAX_PROP_VALUE_LENGTH);
 
@@ -788,7 +795,8 @@ status_t OMXCameraAdapter::insertPreviewSizes(CameraProperties::Properties* para
             CAMHAL_LOGEB("Error inserting supported Landscape preview sizes 0x%x", ret);
             return ret;
         }
-
+        
+#ifndef OMAP_TUNA
         /* Insert Portait Resolutions by verifying Potrait Capability Support */
         ret = encodeSizeCap(caps.tRotatedPreviewResRange,
                             mPreviewPortraitRes,
@@ -986,6 +994,7 @@ status_t OMXCameraAdapter::insertImageFormats(CameraProperties::Properties* para
         }
     }
 
+#ifndef OMAP_TUNA
     for (int i = 0; i < caps.ulImageCodingFormatCount ; i++) {
         ret = encodeImageCodingFormatCap(caps.eImageCodingFormat[i],
                                         mImageCodingFormat,
@@ -997,6 +1006,7 @@ status_t OMXCameraAdapter::insertImageFormats(CameraProperties::Properties* para
             break;
         }
     }
+#endif
 
     if ( NO_ERROR == ret ) {
 #ifdef OMAP_TUNA
@@ -1345,7 +1355,9 @@ status_t OMXCameraAdapter::insertManualExpRanges(CameraProperties::Properties* p
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     if (caps.nManualExpMin > caps.nManualExpMax) {
+#endif
         snprintf(supported, MAX_PROP_VALUE_LENGTH, "%d", (int) 0);
         params->set(CameraProperties::SUPPORTED_MANUAL_EXPOSURE_MIN, supported);
 
@@ -1354,6 +1366,7 @@ status_t OMXCameraAdapter::insertManualExpRanges(CameraProperties::Properties* p
 
         snprintf(supported, MAX_PROP_VALUE_LENGTH, "%d", (int) 0);
         params->set(CameraProperties::SUPPORTED_MANUAL_EXPOSURE_STEP, supported);
+#ifndef OMAP_TUNA
     } else {
         snprintf(supported, MAX_PROP_VALUE_LENGTH, "%d", (int) caps.nManualExpMin);
         params->set(CameraProperties::SUPPORTED_MANUAL_EXPOSURE_MIN, supported);
@@ -1364,6 +1377,7 @@ status_t OMXCameraAdapter::insertManualExpRanges(CameraProperties::Properties* p
         snprintf(supported, MAX_PROP_VALUE_LENGTH, "%d", (int) MANUAL_EXPOSURE_STEP);
         params->set(CameraProperties::SUPPORTED_MANUAL_EXPOSURE_STEP, supported);
     }
+#endif
 
     if (MANUAL_GAIN_ISO_MIN > caps.nSensitivityMax) {
         snprintf(supported, MAX_PROP_VALUE_LENGTH, "%d", (int) 0);
@@ -1535,11 +1549,15 @@ status_t OMXCameraAdapter::insertVNFSupported(CameraProperties::Properties* para
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     if ( OMX_TRUE == caps.bVideoNoiseFilterSupported ) {
         params->set(CameraProperties::VNF_SUPPORTED, android::CameraParameters::TRUE);
     } else {
+#endif
         params->set(CameraProperties::VNF_SUPPORTED, android::CameraParameters::FALSE);
+#ifndef OMAP_TUNA
     }
+#endif
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -1551,11 +1569,15 @@ status_t OMXCameraAdapter::insertVSTABSupported(CameraProperties::Properties* pa
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     if ( OMX_TRUE == caps.bVideoStabilizationSupported ) {
         params->set(CameraProperties::VSTAB_SUPPORTED, android::CameraParameters::TRUE);
     } else {
+#endif
         params->set(CameraProperties::VSTAB_SUPPORTED, android::CameraParameters::FALSE);
+#ifndef OMAP_TUNA
     }
+#endif
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -1568,17 +1590,25 @@ status_t OMXCameraAdapter::insertLocks(CameraProperties::Properties* params, OMX
 
     LOG_FUNCTION_NAME
 
+#ifndef OMAP_TUNA
     if ( caps.bAELockSupported ) {
         params->set(CameraProperties::AUTO_EXPOSURE_LOCK_SUPPORTED, android::CameraParameters::TRUE);
     } else {
+#endif
         params->set(CameraProperties::AUTO_EXPOSURE_LOCK_SUPPORTED, android::CameraParameters::FALSE);
+#ifndef OMAP_TUNA
     }
+#endif
 
+#ifndef OMAP_TUNA
     if ( caps.bAWBLockSupported ) {
         params->set(CameraProperties::AUTO_WHITEBALANCE_LOCK_SUPPORTED, android::CameraParameters::TRUE);
     } else {
+#endif
         params->set(CameraProperties::AUTO_WHITEBALANCE_LOCK_SUPPORTED, android::CameraParameters::FALSE);
+#ifndef OMAP_TUNA
     }
+#endif
 
     LOG_FUNCTION_NAME_EXIT
 
@@ -1700,9 +1730,13 @@ status_t OMXCameraAdapter::insertFocalLength(CameraProperties::Properties* param
 
     memset(supported, '\0', sizeof(supported));
 
+#ifndef OMAP_TUNA
     sprintf(supported, "%d", caps.nFocalLength / 100);
+#endif
     strncat(supported, ".", REMAINING_BYTES(supported));
+#ifndef OMAP_TUNA
     sprintf(supported+(strlen(supported)*sizeof(char)), "%d", caps.nFocalLength % 100);
+#endif
 
     params->set(CameraProperties::FOCAL_LENGTH, supported);
 
@@ -1723,6 +1757,7 @@ status_t OMXCameraAdapter::insertAutoConvergenceModes(CameraProperties::Properti
 
     memset(supported, '\0', sizeof(supported));
 
+#ifndef OMAP_TUNA
     for ( unsigned int i = 0 ; i < caps.ulAutoConvModesCount; i++ ) {
         p = getLUTvalue_OMXtoHAL(caps.eAutoConvModes[i], mAutoConvergenceLUT);
         if ( NULL != p ) {
@@ -1732,6 +1767,7 @@ status_t OMXCameraAdapter::insertAutoConvergenceModes(CameraProperties::Properti
             strncat(supported, p, REMAINING_BYTES(supported));
         }
     }
+#endif
     params->set(CameraProperties::AUTOCONVERGENCE_MODE_VALUES, supported);
 
     LOG_FUNCTION_NAME_EXIT;
@@ -1746,13 +1782,19 @@ status_t OMXCameraAdapter::insertManualConvergenceRange(CameraProperties::Proper
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     snprintf(supported, MAX_PROP_VALUE_LENGTH, "%d", ( int ) ( caps.nManualConvMin ));
+#endif
     params->set(CameraProperties::SUPPORTED_MANUAL_CONVERGENCE_MIN, supported);
 
+#ifndef OMAP_TUNA
     snprintf(supported, MAX_PROP_VALUE_LENGTH, "%d", ( int ) ( caps.nManualConvMax ));
+#endif
     params->set(CameraProperties::SUPPORTED_MANUAL_CONVERGENCE_MAX, supported);
 
+#ifndef OMAP_TUNA
     snprintf(supported, MAX_PROP_VALUE_LENGTH, "%d", ( int ) ( caps.nManualConvMax != caps.nManualConvMin ));
+#endif
     params->set(CameraProperties::SUPPORTED_MANUAL_CONVERGENCE_STEP, supported);
 
     LOG_FUNCTION_NAME_EXIT;
@@ -1760,6 +1802,7 @@ status_t OMXCameraAdapter::insertManualConvergenceRange(CameraProperties::Proper
     return ret;
 }
 
+#ifndef OMAP_TUNA
 status_t OMXCameraAdapter::insertMechanicalMisalignmentCorrection(CameraProperties::Properties* params, OMX_TI_CAPTYPE &caps)
 {
     LOG_FUNCTION_NAME;
@@ -1770,6 +1813,7 @@ status_t OMXCameraAdapter::insertMechanicalMisalignmentCorrection(CameraProperti
 
     return OK;
 }
+#endif
 
 status_t OMXCameraAdapter::insertCaptureModes(CameraProperties::Properties* params, OMX_TI_CAPTYPE &caps)
 {
@@ -1781,6 +1825,7 @@ status_t OMXCameraAdapter::insertCaptureModes(CameraProperties::Properties* para
 
     memset(supported, '\0', sizeof(supported));
 
+#ifndef OMAP_TUNA
     // 3D mode detect: Misalignment is present only in 3d mode
     if (caps.bMechanicalMisalignmentSupported)
     {
@@ -1790,6 +1835,7 @@ status_t OMXCameraAdapter::insertCaptureModes(CameraProperties::Properties* para
     }
     else // 2D mode detect: Misalignment is present only in 3d mode
     {
+#endif
         strncat(supported, TICameraParameters::HIGH_QUALITY_MODE, REMAINING_BYTES(supported));
         strncat(supported, PARAM_SEP, REMAINING_BYTES(supported));
         strncat(supported, TICameraParameters::VIDEO_MODE, REMAINING_BYTES(supported));
@@ -1807,8 +1853,11 @@ status_t OMXCameraAdapter::insertCaptureModes(CameraProperties::Properties* para
 #endif
         strncat(supported, PARAM_SEP, REMAINING_BYTES(supported));
         strncat(supported, TICameraParameters::ZOOM_BRACKETING, REMAINING_BYTES(supported));
+#ifndef OMAP_TUNA
     }
+#endif
 
+#ifndef OMAP_TUNA
     for ( unsigned int i = 0 ; i < caps.ulBracketingModesCount; i++ ) {
         p = getLUTvalue_OMXtoHAL(caps.eBracketingModes[i], mBracketingModesLUT);
         if ( NULL != p ) {
@@ -1818,6 +1867,7 @@ status_t OMXCameraAdapter::insertCaptureModes(CameraProperties::Properties* para
             strncat(supported, p, REMAINING_BYTES(supported));
         }
     }
+#endif
 
     params->set(CameraProperties::CAP_MODE_VALUES, supported);
 
@@ -1872,14 +1922,18 @@ status_t OMXCameraAdapter::insertVideoSnapshotSupported(CameraProperties::Proper
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     if (caps.bStillCapDuringVideoSupported)
     {
         params->set(CameraProperties::VIDEO_SNAPSHOT_SUPPORTED, android::CameraParameters::TRUE);
     }
     else
     {
+#endif
         params->set(CameraProperties::VIDEO_SNAPSHOT_SUPPORTED, android::CameraParameters::FALSE);
+#ifndef OMAP_TUNA
     }
+#endif
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -1893,13 +1947,17 @@ status_t OMXCameraAdapter::insertGBCESupported(CameraProperties::Properties* par
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     if (caps.bGbceSupported) {
         params->set(CameraProperties::SUPPORTED_GBCE,
                     android::CameraParameters::TRUE);
     } else {
+#endif
         params->set(CameraProperties::SUPPORTED_GBCE,
                     android::CameraParameters::FALSE);
+#ifndef OMAP_TUNA
     }
+#endif
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -1913,13 +1971,17 @@ status_t OMXCameraAdapter::insertGLBCESupported(CameraProperties::Properties* pa
 
     LOG_FUNCTION_NAME;
 
+#ifndef OMAP_TUNA
     if (caps.bGlbceSupported) {
         params->set(CameraProperties::SUPPORTED_GLBCE,
                     android::CameraParameters::TRUE);
     } else {
+#endif
         params->set(CameraProperties::SUPPORTED_GLBCE,
                     android::CameraParameters::FALSE);
+#ifndef OMAP_TUNA
     }
+#endif
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -2217,9 +2279,11 @@ status_t OMXCameraAdapter::insertCapabilities(CameraProperties::Properties* para
         ret = insertManualConvergenceRange(params, caps);
     }
 
+#ifndef OMAP_TUNA
     if ( NO_ERROR == ret) {
         ret = insertMechanicalMisalignmentCorrection(params, caps);
     }
+#endif
 
     if ( NO_ERROR == ret) {
         ret = insertRaw(params, caps);
@@ -2299,11 +2363,13 @@ bool OMXCameraAdapter::_checkOmxTiCap(const OMX_TI_CAPTYPE & caps)
     CAMHAL_CHECK_OMX_TI_CAP(ulFlashCount, eFlashModes);
     CAMHAL_CHECK_OMX_TI_CAP(ulPrvVarFPSModesCount, tPrvVarFPSModes);
     CAMHAL_CHECK_OMX_TI_CAP(ulCapVarFPSModesCount, tCapVarFPSModes);
+#ifndef OMAP_TUNA
     CAMHAL_CHECK_OMX_TI_CAP(ulAutoConvModesCount, eAutoConvModes);
     CAMHAL_CHECK_OMX_TI_CAP(ulBracketingModesCount, eBracketingModes);
     CAMHAL_CHECK_OMX_TI_CAP(ulImageCodingFormatCount, eImageCodingFormat);
     CAMHAL_CHECK_OMX_TI_CAP(ulPrvFrameLayoutCount, ePrvFrameLayout);
     CAMHAL_CHECK_OMX_TI_CAP(ulCapFrameLayoutCount, eCapFrameLayout);
+#endif
 
 #undef CAMHAL_CHECK_OMX_TI_CAP
 
@@ -2341,12 +2407,14 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("tPreviewResRange.nMaxResInPixels = %d", int(caps.tPreviewResRange.nMaxResInPixels));
 #endif
 
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("");
     CAMHAL_LOGD("tRotatedPreviewResRange.nWidthMin  = %d", int(caps.tRotatedPreviewResRange.nWidthMin));
     CAMHAL_LOGD("tRotatedPreviewResRange.nHeightMin = %d", int(caps.tRotatedPreviewResRange.nHeightMin));
     CAMHAL_LOGD("tRotatedPreviewResRange.nWidthMax  = %d", int(caps.tRotatedPreviewResRange.nWidthMax));
     CAMHAL_LOGD("tRotatedPreviewResRange.nHeightMax = %d", int(caps.tRotatedPreviewResRange.nHeightMax));
     CAMHAL_LOGD("tRotatedPreviewResRange.nMaxResInPixels = %d", int(caps.tRotatedPreviewResRange.nMaxResInPixels));
+#endif
 
     CAMHAL_LOGD("");
     CAMHAL_LOGD("tImageResRange.nWidthMin  = %d", int(caps.tImageResRange.nWidthMin));
@@ -2445,6 +2513,7 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("tSenMounting.eFacing   = %d", int(caps.tSenMounting.eFacing));
 #endif
 
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("");
     CAMHAL_LOGD("ulAutoConvModesCount = %d", int(caps.ulAutoConvModesCount));
     for ( int i = 0; i < int(caps.ulAutoConvModesCount); ++i )
@@ -2454,27 +2523,36 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("ulBracketingModesCount = %d", int(caps.ulBracketingModesCount));
     for ( int i = 0; i < int(caps.ulBracketingModesCount); ++i )
         CAMHAL_LOGD("  eBracketingModes[%2d] = %d", i, int(caps.eBracketingModes[i]));
+#endif
 
     CAMHAL_LOGD("");
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("bGbceSupported    = %d", int(caps.bGbceSupported));
     CAMHAL_LOGD("bRawJpegSupported = %d", int(caps.bRawJpegSupported));
 #endif
 
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("");
     CAMHAL_LOGD("ulImageCodingFormatCount = %d", int(caps.ulImageCodingFormatCount));
     for ( int i = 0; i < int(caps.ulImageCodingFormatCount); ++i )
         CAMHAL_LOGD("  eImageCodingFormat[%2d] = %d", i, int(caps.eImageCodingFormat[i]));
+#endif
 
     CAMHAL_LOGD("");
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("uSenNativeResWidth       = %d", int(caps.uSenNativeResWidth));
     CAMHAL_LOGD("uSenNativeResHeight      = %d", int(caps.uSenNativeResHeight));
+#endif
     CAMHAL_LOGD("ulAlgoAreasFocusCount    = %d", int(caps.ulAlgoAreasFocusCount));
     CAMHAL_LOGD("ulAlgoAreasExposureCount = %d", int(caps.ulAlgoAreasExposureCount));
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("bAELockSupported         = %d", int(caps.bAELockSupported));
     CAMHAL_LOGD("bAWBLockSupported        = %d", int(caps.bAWBLockSupported));
     CAMHAL_LOGD("bAFLockSupported         = %d", int(caps.bAFLockSupported));
     CAMHAL_LOGD("nFocalLength             = %d", int(caps.nFocalLength));
+#endif
 
+#ifndef OMAP_TUNA
     CAMHAL_LOGD("");
     CAMHAL_LOGD("ulPrvFrameLayoutCount = %d", int(caps.ulPrvFrameLayoutCount));
     for ( int i = 0; i < int(caps.ulPrvFrameLayoutCount); ++i )
@@ -2484,6 +2562,7 @@ bool OMXCameraAdapter::_dumpOmxTiCap(const int sensorId, const OMX_TI_CAPTYPE & 
     CAMHAL_LOGD("ulCapFrameLayoutCount = %d", int(caps.ulCapFrameLayoutCount));
     for ( int i = 0; i < int(caps.ulCapFrameLayoutCount); ++i )
         CAMHAL_LOGD("  eCapFrameLayout[%2d] = %d", i, int(caps.eCapFrameLayout[i]));
+#endif
 
 #ifndef OMAP_TUNA
     CAMHAL_LOGD("");
