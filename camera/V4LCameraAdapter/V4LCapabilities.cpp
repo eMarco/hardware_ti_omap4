@@ -83,7 +83,9 @@ status_t V4LCameraAdapter::insertDefaults(CameraProperties::Properties* params, 
     params->set(CameraProperties::JPEG_QUALITY, "90");
     params->set(CameraProperties::JPEG_THUMBNAIL_QUALITY, "50");
     params->set(CameraProperties::FRAMERATE_RANGE, DEFAULT_FRAMERATE_RANGE);
+#ifndef OMAP_TUNA
     params->set(CameraProperties::S3D_PRV_FRAME_LAYOUT, "none");
+#endif
     params->set(CameraProperties::SUPPORTED_EXPOSURE_MODES, "auto");
     params->set(CameraProperties::SUPPORTED_ISO_VALUES, "auto");
     params->set(CameraProperties::SUPPORTED_ANTIBANDING, "auto");
@@ -140,7 +142,9 @@ status_t V4LCameraAdapter::insertPreviewSizes(CameraProperties::Properties* para
     }
 
     params->set(CameraProperties::SUPPORTED_PREVIEW_SIZES, supported);
+#ifndef OMAP_TUNA
     params->set(CameraProperties::SUPPORTED_PREVIEW_SUBSAMPLED_SIZES, supported);
+#endif
     return NO_ERROR;
 }
 
