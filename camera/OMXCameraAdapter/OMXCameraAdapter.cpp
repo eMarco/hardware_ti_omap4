@@ -704,6 +704,16 @@ status_t OMXCameraAdapter::setParameters(const android::CameraParameters &params
 
     ret |= setParametersEXIF(params, state);
 
+#ifdef MOTOROLA_CAMERA
+    CAMHAL_LOGDA("Start setting of Motorola specific parameters");
+    if (NULL != params.get(TICameraParameters::KEY_MOT_LEDFLASH)) {
+        setLedFlash((unsigned int) (params.getInt(TICameraParameters::KEY_MOT_LEDFLASH)));
+    }
+    if (NULL != params.get(TICameraParameters::KEY_MOT_LEDTORCH)) {
+        setLedTorch((unsigned int) (params.getInt(TICameraParameters::KEY_MOT_LEDTORCH)));
+    }
+#endif
+
     mParams = params;
     mFirstTimeInit = false;
 
@@ -1015,6 +1025,7 @@ status_t OMXCameraAdapter::setupTunnel(uint32_t SliceHeight, uint32_t EncoderHan
         CAMHAL_LOGEB("OMX_SetParameter OMX_IndexParamPortDefinition Error- %x", eError);
     }
 
+#ifndef MOTOROLA_CAMERA
     //Slice  Configuration
     OMX_TI_PARAM_VTCSLICE VTCSlice;
     OMX_INIT_STRUCT_PTR(&VTCSlice, OMX_TI_PARAM_VTCSLICE);
@@ -1036,6 +1047,7 @@ status_t OMXCameraAdapter::setupTunnel(uint32_t SliceHeight, uint32_t EncoderHan
         CAMHAL_LOGEB("OMX_SetupTunnel returned error: 0x%x", eError);
         return BAD_VALUE;
     }
+#endif
 
     return NO_ERROR;
 }

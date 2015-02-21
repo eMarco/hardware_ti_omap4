@@ -387,6 +387,7 @@ status_t OMXCameraAdapter::setParameters3A(const android::CameraParameters &para
         }
     }
 
+#ifndef MOTOROLA_CAMERA
 // TI extensions for enable/disable algos
 #ifndef OMAP_TUNA
     declareParameter3ABool(params, TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA,
@@ -413,6 +414,7 @@ status_t OMXCameraAdapter::setParameters3A(const android::CameraParameters &para
 }
 
 #ifndef OMAP_TUNA
+#ifndef MOTOROLA_CAMERA
 void OMXCameraAdapter::updateGammaTable(const char* gamma)
 {
     unsigned int plane = 0;
@@ -489,6 +491,7 @@ void OMXCameraAdapter::updateGammaTable(const char* gamma)
         mPending3Asettings |= SetGammaTable;
     }
 }
+#endif
 #endif
 
 void OMXCameraAdapter::declareParameter3ABool(const android::CameraParameters &params, const char *key,
@@ -1859,7 +1862,11 @@ status_t OMXCameraAdapter::setParameter3ABool(const OMX_INDEXTYPE omx_idx,
   return Utils::ErrorUtils::omxToAndroidError(eError);
 }
 
+<<<<<<< HEAD
 #ifndef OMAP_TUNA
+=======
+#ifndef MOTOROLA_CAMERA
+>>>>>>> 0fc5d34... camera: Add support for camera on motorola devices
 status_t OMXCameraAdapter::setAlgoExternalGamma(Gen3A_settings& Gen3A)
 {
     return setParameter3ABool((OMX_INDEXTYPE) OMX_TI_IndexConfigExternalGamma, Gen3A.AlgoExternalGamma, "External Gamma");
@@ -2105,7 +2112,11 @@ status_t OMXCameraAdapter::apply3Asettings( Gen3A_settings& Gen3A )
                   }
                   break;
 
+<<<<<<< HEAD
 #ifndef OMAP_TUNA
+=======
+#ifndef MOTOROLA_CAMERA
+>>>>>>> 0fc5d34... camera: Add support for camera on motorola devices
                 //TI extensions for enable/disable algos
                 case SetAlgoExternalGamma:
                   {

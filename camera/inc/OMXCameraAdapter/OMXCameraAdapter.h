@@ -581,6 +581,7 @@ private:
                                       const OMX_BOOL data, const char *msg);
 #ifndef OMAP_TUNA
     status_t setAlgoExternalGamma(Gen3A_settings& Gen3A);
+#ifndef MOTOROLA_CAMERA
     status_t setAlgoNSF1(Gen3A_settings& Gen3A);
     status_t setAlgoNSF2(Gen3A_settings& Gen3A);
     status_t setAlgoSharpening(Gen3A_settings& Gen3A);
@@ -857,7 +858,16 @@ private:
     };
     android::sp<CommandHandler> mCommandHandler;
 
+#ifdef MOTOROLA_CAMERA
+    status_t setLedFlash(int nLedFlashIntensP);
+    status_t setLedTorch(int nLedTorchIntensP);
+#endif
+
 public:
+
+#ifdef MOTOROLA_CAMERA
+    status_t getOTPEeprom(unsigned char * pData, unsigned long nSize);
+#endif
 
     class OMXCallbackHandler : public android::Thread {
         public:
@@ -941,6 +951,10 @@ private:
     static const int SENSORID_OV8830;
     static const int SENSORID_OV2722;
     static const int SENSORID_OV9726;
+#ifdef MOTOROLA_CAMERA
+    static const int SENSORID_OV8820;
+    static const int SENSORID_MT9M114;
+#endif
     static const CapU32 mFacing [];
     static const userToOMX_LUT mAutoConvergence [];
     static const LUTtype mAutoConvergenceLUT;
