@@ -16,7 +16,7 @@
 # all OMAP4 devices.
 
 PRODUCT_PACKAGES += \
-    hwcomposer.$(TARGET_BOOTLOADER_BOARD_NAME)
+    hwcomposer.tuna
 
 PRODUCT_VENDOR_KERNEL_HEADERS := hardware/ti/omap4/kernel-headers
 

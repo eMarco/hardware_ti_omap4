@@ -1887,6 +1887,7 @@ status_t OMXCameraAdapter::insertLayout(CameraProperties::Properties* params, OM
     LOG_FUNCTION_NAME;
 
     memset(supported, '\0', MAX_PROP_VALUE_LENGTH);
+#ifndef OMAP_TUNA
     for ( unsigned int i = 0 ; i < caps.ulPrvFrameLayoutCount; i++ ) {
         p = getLUTvalue_OMXtoHAL(caps.ePrvFrameLayout[i], mLayoutLUT);
         if ( NULL != p ) {
@@ -1896,9 +1897,11 @@ status_t OMXCameraAdapter::insertLayout(CameraProperties::Properties* params, OM
             strncat(supported, p, MAX_PROP_NAME_LENGTH);
         }
     }
+#endif
     params->set(CameraProperties::S3D_PRV_FRAME_LAYOUT_VALUES, supported);
 
     memset(supported, '\0', MAX_PROP_VALUE_LENGTH);
+#ifndef OMAP_TUNA
     for ( unsigned int i = 0 ; i < caps.ulCapFrameLayoutCount; i++ ) {
         p = getLUTvalue_OMXtoHAL(caps.eCapFrameLayout[i], mLayoutLUT);
         if ( NULL != p ) {
@@ -1908,6 +1911,7 @@ status_t OMXCameraAdapter::insertLayout(CameraProperties::Properties* params, OM
             strncat(supported, p, MAX_PROP_NAME_LENGTH);
         }
     }
+#endif
     params->set(CameraProperties::S3D_CAP_FRAME_LAYOUT_VALUES, supported);
 
     LOG_FUNCTION_NAME_EXIT;
