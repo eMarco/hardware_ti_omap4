@@ -149,6 +149,7 @@ EXIT:
  * @return OMX_ErrorNone = Successful
  */
 /* ===========================================================================*/
+#ifndef OMAP_TUNA
 static OMX_ERRORTYPE _OMX_CameraVtcAllocateMemory(OMX_IN OMX_HANDLETYPE hComponent)
 {
     OMX_ERRORTYPE eError = OMX_ErrorNone, eCompReturn = OMX_ErrorNone;
@@ -229,6 +230,7 @@ EXIT:
    DOMX_EXIT("eError: %d", eError);
    return eError;
 }
+#endif
 
 static OMX_ERRORTYPE ComponentPrivateDeInit(OMX_IN OMX_HANDLETYPE hComponent)
 {
@@ -260,11 +262,13 @@ static OMX_ERRORTYPE ComponentPrivateDeInit(OMX_IN OMX_HANDLETYPE hComponent)
                 OMX_ErrorInsufficientResources, "Mutex release failed");
         }
 #endif
+#ifndef OMAP_TUNA
         OMX_CameraVtcFreeMemory(hComponent);
 
 
     if(pCompPrv->pCompProxyPrv != NULL) {
         pCamPrv = (OMX_PROXY_CAM_PRIVATE*)pCompPrv->pCompProxyPrv;
+
         for (i = 0; i < PROXY_MAXNUMOFPORTS; i++) {
             for (j = 0; j < MAX_NUM_INTERNAL_BUFFERS; j++) {
                 if (pCamPrv->gComponentBufferAllocation[i][j]) {
@@ -275,12 +279,11 @@ static OMX_ERRORTYPE ComponentPrivateDeInit(OMX_IN OMX_HANDLETYPE hComponent)
             }
         }
 
-
         TIMM_OSAL_Free(pCompPrv->pCompProxyPrv);
         pCompPrv->pCompProxyPrv = NULL;
         pCamPrv = NULL;
     }
-
+#endif
 	eError = PROXY_ComponentDeInit(hComponent);
 
       EXIT:
@@ -300,22 +303,28 @@ static OMX_ERRORTYPE Camera_SendCommand(OMX_IN OMX_HANDLETYPE hComponent,
     OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
     PROXY_COMPONENT_PRIVATE *pCompPrv;
     OMX_PROXY_CAM_PRIVATE   *pCamPrv;
+#ifndef OMAP_TUNA
     MEMPLUGIN_BUFFER_PARAMS delBuffer_params;
     MEMPLUGIN_BUFFER_PROPERTIES delBuffer_prop;
+#endif
     pCompPrv = (PROXY_COMPONENT_PRIVATE *) hComp->pComponentPrivate;
 
     pCamPrv = (OMX_PROXY_CAM_PRIVATE*)pCompPrv->pCompProxyPrv;
 
+#ifndef OMAP_TUNA
     MEMPLUGIN_BUFFER_PARAMS_INIT(delBuffer_params);
+#endif
     if ((eCmd == OMX_CommandStateSet) &&
         (nParam == (OMX_STATETYPE) OMX_StateIdle))
     {
         /* Allocate memory for Video VTC usecase, if applicable. */
+#ifndef OMAP_TUNA
         eError = _OMX_CameraVtcAllocateMemory(hComponent);
         if (eError != OMX_ErrorNone) {
             DOMX_ERROR("DOMX: _OMX_CameraVtcAllocateMemory completed with error 0x%x\n", eError);
             goto EXIT;
         }
+#endif
 #ifdef USES_LEGACY_DOMX_DCC
         if (!dcc_loaded)
         {
@@ -338,7 +347,9 @@ static OMX_ERRORTYPE Camera_SendCommand(OMX_IN OMX_HANDLETYPE hComponent,
             dcc_loaded = OMX_TRUE;
         }
 #endif
-    } else if (eCmd == OMX_CommandPortDisable) {
+    }
+#ifndef OMAP_TUNA
+else if (eCmd == OMX_CommandPortDisable) {
         int i, j;
         for (i = 0; i < PROXY_MAXNUMOFPORTS; i++) {
             if ((i == nParam) || (nParam == OMX_ALL)) {
@@ -353,6 +364,7 @@ static OMX_ERRORTYPE Camera_SendCommand(OMX_IN OMX_HANDLETYPE hComponent,
             }
         }
     }
+#endif
 
     if ((eCmd == OMX_CommandStateSet) &&
 	(nParam == (OMX_STATETYPE) OMX_StateLoaded))
@@ -501,18 +513,20 @@ static OMX_ERRORTYPE CameraSetParam(OMX_IN OMX_HANDLETYPE
     OMX_INOUT OMX_PTR pComponentParameterStructure)
 {
     OMX_ERRORTYPE eError = OMX_ErrorNone;
-    PROXY_COMPONENT_PRIVATE *pCompPrv;
     OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *)hComponent;
+    PROXY_COMPONENT_PRIVATE *pCompPrv;
     pCompPrv = (PROXY_COMPONENT_PRIVATE *)hComp->pComponentPrivate;
 
     switch (nParamIndex)
     {
+#ifndef OMAP_TUNA
 	case OMX_TI_IndexParamComponentBufferAllocation:
              eError = GLUE_CameraSetParam(hComponent,
                                           nParamIndex,
                                           pComponentParameterStructure);
 		goto EXIT;
 		break;
+#endif
 	default:
 		 break;
 	}
@@ -587,12 +601,13 @@ OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
 		TIMM_OSAL_Free(pComponentPrivate->pCompProxyPrv);
 		goto EXIT;
 	}
-
+#ifndef OMAP_TUNA
         for (i = 0; i < PROXY_MAXNUMOFPORTS; i++) {
             for (j = 0; j < MAX_NUM_INTERNAL_BUFFERS; j++) {
                 pCamPrv->gComponentBufferAllocation[i][j] = NULL;
             }
         }
+#endif
 	pHandle->ComponentDeInit = ComponentPrivateDeInit;
 	pHandle->GetConfig = CameraGetConfig;
 	pHandle->SetConfig = CameraSetConfig;

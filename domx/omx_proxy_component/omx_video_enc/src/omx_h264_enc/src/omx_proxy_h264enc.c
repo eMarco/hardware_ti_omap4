@@ -121,9 +121,7 @@ OMX_U16 nBFrames = 0; /* Number of B Frames in H264 Encoder */
  * ANDROID_QUIRCK_CHANGE_PORT_VALUES
  */
 #define OMX_H264VE_NUM_INTERNAL_BUF (8)
-#ifndef HAL_PIXEL_FORMAT_TI_NV12
 #define HAL_PIXEL_FORMAT_TI_NV12 (0x100)
-#endif
 
 #define COLORCONVERT_MAX_SUB_BUFFERS (3)
 
@@ -502,13 +500,14 @@ OMX_ERRORTYPE LOCAL_PROXY_H264E_GetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 		}
 #endif
         }
+#ifndef OMAP_TUNA
     else if (nParamIndex == OMX_TI_IndexComponentHandle)
     {
         OMX_TI_COMPONENT_HANDLE * pCompHandle = pParamStruct;
         pCompHandle->pHandle = hComponent;
         eError = OMX_ErrorNone;
     }
-
+#endif
 	PROXY_assert((eError == OMX_ErrorNone) || (eError == OMX_ErrorNoMore),
 		    eError," Error in Proxy GetParameter");
 
@@ -716,7 +715,7 @@ OMX_ERRORTYPE LOCAL_PROXY_H264E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	OMX_PTR pBufferOrig = NULL;
 	OMX_U32 nStride = 0, nNumLines = 0;
 	OMX_PARAM_PORTDEFINITIONTYPE tParamStruct;
-	OMX_U32 nFilledLen = 0, nAllocLen = 0;
+	OMX_U32 nFilledLen, nAllocLen;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
 	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 	TIMM_OSAL_ERRORTYPE eOSALStatus = TIMM_OSAL_ERR_NONE;

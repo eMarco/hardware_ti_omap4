@@ -260,10 +260,11 @@ static const char KEY_ALGO_NSF2[];
 static const char KEY_ALGO_SHARPENING[];
 static const char KEY_ALGO_THREELINCOLORMAP[];
 static const char KEY_ALGO_GIC[];
-#endif
+
 
 //Gamma table
 static const char KEY_GAMMA_TABLE[];
+#endif
 
 static const char KEY_PREVIEW_FRAME_RATE_RANGE[];
 

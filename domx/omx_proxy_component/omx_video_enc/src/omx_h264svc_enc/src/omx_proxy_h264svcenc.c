@@ -490,12 +490,14 @@ OMX_ERRORTYPE LOCAL_PROXY_H264SVCE_GetParameter(OMX_IN OMX_HANDLETYPE hComponent
             eError = OMX_ErrorNone;
         }
 #endif
-    } else if( nParamIndex == OMX_TI_IndexComponentHandle ) {
+    }
+#ifndef OMAP_TUNA
+    else if( nParamIndex == OMX_TI_IndexComponentHandle ) {
         OMX_TI_COMPONENT_HANDLE   *pCompHandle = pParamStruct;
         pCompHandle->pHandle = hComponent;
         eError = OMX_ErrorNone;
     }
-
+#endif
     PROXY_assert((eError == OMX_ErrorNone) || (eError == OMX_ErrorNoMore),
                  eError, " Error in Proxy GetParameter");
 

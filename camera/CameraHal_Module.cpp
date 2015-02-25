@@ -637,7 +637,7 @@ int camera_device_open(const hw_module_t* module, const char* name,
 
     android::AutoMutex lock(gCameraHalDeviceLock);
 
-    CAMHAL_LOGI("camera_device open");
+    CAMHAL_LOGI("camera_device open: cameraid = %d", cameraid);
 
     if (name != NULL) {
         cameraid = atoi(name);

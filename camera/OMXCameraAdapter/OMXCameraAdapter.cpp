@@ -2216,9 +2216,7 @@ status_t OMXCameraAdapter::startPreview()
     if ( OMX_ErrorNone == eError) {
         ret |= setExtraData(true, mCameraAdapterParameters.mPrevPortIndex, OMX_AncillaryData);
 #ifdef OMAP_ENHANCEMENT_CPCAM
-#ifndef OMAP_TUNA
         ret |= setExtraData(true, OMX_ALL, OMX_TI_VectShotInfo);
-#endif
 #endif
 #ifdef CAMERAHAL_OMX_PROFILING
         if ( UNLIKELY( mDebugProfile ) ) {
@@ -4418,7 +4416,6 @@ public:
             }
 
 #ifdef OMAP_ENHANCEMENT_CPCAM
-#ifndef OMAP_TUNA
             CAMHAL_LOGD("Camera mode: CPCAM ");
             properties->setMode(MODE_CPCAM);
             err = fetchCapabiltiesForMode(OMX_TI_CPCam,
@@ -4428,9 +4425,8 @@ public:
                 return err;
             }
 #endif
-#endif
 
-#ifndef OMAP_TUNA
+
 #ifdef CAMERAHAL_OMAP5_CAPTURE_MODES
             CAMHAL_LOGD("Camera mode: VIDEO HQ ");
             properties->setMode(MODE_VIDEO_HIGH_QUALITY);
@@ -4442,7 +4438,7 @@ public:
             }
 
 #endif
-
+#ifndef OMAP_TUNA
         }
 #endif
         return err;

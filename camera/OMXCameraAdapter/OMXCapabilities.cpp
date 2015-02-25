@@ -610,11 +610,8 @@ status_t OMXCameraAdapter::encodeSizeCap3D(OMX_TI_CAPRESTYPE &res,
        if ( (cap[i].width <= res.nWidthMax) &&
             (cap[i].height <= res.nHeightMax) &&
             (cap[i].width >= res.nWidthMin) &&
-            (cap[i].height >= res.nHeightMin)
-#ifndef OMAP_TUNA
-            && (cap[i].width * cap[i].height <= res.nMaxResInPixels)
-#endif
-                                                                 )  {
+            (cap[i].height >= res.nHeightMin)  &&
+            (cap[i].width * cap[i].height <= res.nMaxResInPixels))  {
                if (buffer[0] != '\0') {
                    strncat(buffer, PARAM_SEP, bufferSize - 1);
                }
