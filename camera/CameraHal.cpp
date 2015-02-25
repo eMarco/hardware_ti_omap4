@@ -35,7 +35,7 @@ namespace Ti {
 namespace Camera {
 
 extern "C" CameraAdapter* OMXCameraAdapter_Factory(size_t);
-extern "C" CameraAdapter* V4LCameraAdapter_Factory(size_t, CameraHal*);
+extern "C" CameraAdapter* V4LCameraAdapter_Factory(size_t);
 
 /*****************************************************************************/
 
@@ -68,11 +68,7 @@ extern const char * const kYuvImagesOutputDirPath = "/data/misc/camera/YuV_PiCtU
 
 
 #ifdef OMAP_ENHANCEMENT_CPCAM
-static int dummy_update_and_get_buffer(preview_stream_ops_t*, buffer_handle_t**, int*,int*) {
-    return INVALID_OPERATION;
-}
-
-static int dummy_release_buffer(preview_stream_ops_t*, int slot) {
+static int dummy_update_and_get_buffer(preview_stream_ops_t*, buffer_handle_t**, int*) {
     return INVALID_OPERATION;
 }
 
@@ -87,73 +83,15 @@ static int dummy_get_buffer_format(preview_stream_ops_t*, int*) {
 static int dummy_set_metadata(preview_stream_ops_t*, const camera_memory_t*) {
     return INVALID_OPERATION;
 }
-
-static int dummy_get_id(preview_stream_ops_t*, char *data, unsigned int dataSize) {
-    return INVALID_OPERATION;
-}
-
-static int dummy_get_buffer_count(preview_stream_ops_t*, int *count) {
-    return INVALID_OPERATION;
-}
-
-static int dummy_get_crop(preview_stream_ops_t*,
-                          int *, int *, int *, int *) {
-    return INVALID_OPERATION;
-}
-
-static int dummy_get_current_size(preview_stream_ops_t*,
-                                  int *, int *) {
-    return INVALID_OPERATION;
-}
 #endif
 
-
-CameraHal::SocFamily CameraHal::getSocFamily() {
-    static const struct {
-        const char *name;
-        const CameraHal::SocFamily value;
-    } socFamilyArray[] = {
-        {"OMAP4430", SocFamily_Omap4430},
-        {"OMAP4460", SocFamily_Omap4460},
-        {"OMAP4470", SocFamily_Omap4470}
-    };
-    // lets get the soc family string from sysfs
-    static const char *sysfsNode = "/sys/board_properties/soc/family";
-    FILE *sysfsFd = fopen(sysfsNode, "r");
-    static const int bufSize = 128;
-    char buf[bufSize];
-    if (sysfsFd == NULL) {
-        CAMHAL_LOGEA("'%s' Not Available", sysfsNode);
-        return SocFamily_Undefined;
-    }
-    const char *res = fgets(buf, bufSize, sysfsFd);
-    fclose(sysfsFd);
-    if (res == NULL) {
-        CAMHAL_LOGEA("Error reading '%s'", sysfsNode);
-        return SocFamily_Undefined;
-    }
-    // translate it to CameraHal::SocFamily enum
-    for (int i = 0; i < SocFamily_ElementCount; ++i) {
-        if (strncmp(socFamilyArray[i].name, buf, strlen(socFamilyArray[i].name)) == 0) {
-            return socFamilyArray[i].value;
-        }
-    }
-    return SocFamily_Undefined;
-}
-
-
-#ifdef OMAP_ENHANCEMENT_CPCAM
+#ifdef OMAP_ENHANCEMENT
 static preview_stream_extended_ops_t dummyPreviewStreamExtendedOps = {
 #ifdef OMAP_ENHANCEMENT_CPCAM
     dummy_update_and_get_buffer,
-    dummy_release_buffer,
     dummy_get_buffer_dimension,
     dummy_get_buffer_format,
     dummy_set_metadata,
-    dummy_get_id,
-    dummy_get_buffer_count,
-    dummy_get_crop,
-    dummy_get_current_size,
 #endif
 };
 #endif
@@ -161,12 +99,12 @@ static preview_stream_extended_ops_t dummyPreviewStreamExtendedOps = {
 
 DisplayAdapter::DisplayAdapter()
 {
-#ifdef OMAP_ENHANCEMENT_CPCAM
+#ifdef OMAP_ENHANCEMENT
     mExtendedOps = &dummyPreviewStreamExtendedOps;
 #endif
 }
 
-#ifdef OMAP_ENHANCEMENT_CPCAM
+#ifdef OMAP_ENHANCEMENT
 void DisplayAdapter::setExtendedOps(preview_stream_extended_ops_t * extendedOps) {
     mExtendedOps = extendedOps ? extendedOps : &dummyPreviewStreamExtendedOps;
 }
@@ -191,7 +129,6 @@ static void orientation_cb(uint32_t orientation, uint32_t tilt, void* cookie) {
     }
 
 }
-
 /*-------------Camera Hal Interface Method definitions STARTS here--------------------*/
 
 /**
@@ -385,6 +322,7 @@ int CameraHal::setParameters(const android::CameraParameters& params)
 
     int w, h;
     int framerate;
+    int maxFPS, minFPS;
     const char *valstr = NULL;
     int varint = 0;
     status_t ret = NO_ERROR;
@@ -434,10 +372,15 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 // make sure we support vstab...if we don't and application is trying to set
                 // vstab then return an error
                 if (strcmp(mCameraProperties->get(CameraProperties::VSTAB_SUPPORTED),
-                           android::CameraParameters::TRUE) != 0 &&
-                    strcmp(valstr, android::CameraParameters::TRUE) == 0) {
+                           android::CameraParameters::TRUE) == 0) {
+                    CAMHAL_LOGDB("VSTAB %s", valstr);
+                    mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION, valstr);
+                } else if (strcmp(valstr, android::CameraParameters::TRUE) == 0) {
                     CAMHAL_LOGEB("ERROR: Invalid VSTAB: %s", valstr);
                     return BAD_VALUE;
+                } else {
+                    mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION,
+                                    android::CameraParameters::FALSE);
                 }
             }
 
@@ -466,6 +409,16 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 updateRequired = true;
             }
 
+            if ((valstr = params.get(TICameraParameters::KEY_IPP)) != NULL) {
+                if (isParameterValid(valstr,mCameraProperties->get(CameraProperties::SUPPORTED_IPP_MODES))) {
+                    CAMHAL_LOGDB("IPP mode set %s", valstr);
+                    mParameters.set(TICameraParameters::KEY_IPP, valstr);
+                } else {
+                    CAMHAL_LOGEB("ERROR: Invalid IPP mode: %s", valstr);
+                    return BAD_VALUE;
+                }
+            }
+
 #ifdef OMAP_ENHANCEMENT_VTC
             if ((valstr = params.get(TICameraParameters::KEY_VTC_HINT)) != NULL ) {
                 mParameters.set(TICameraParameters::KEY_VTC_HINT, valstr);
@@ -487,21 +440,7 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 }
             }
 #endif
-        }
-
-        if ((valstr = params.get(TICameraParameters::KEY_IPP)) != NULL) {
-            if (isParameterValid(valstr,mCameraProperties->get(CameraProperties::SUPPORTED_IPP_MODES))) {
-                if ((mParameters.get(TICameraParameters::KEY_IPP) == NULL) ||
-                        (strcmp(valstr, mParameters.get(TICameraParameters::KEY_IPP)))) {
-                    CAMHAL_LOGDB("IPP mode set %s", params.get(TICameraParameters::KEY_IPP));
-                    mParameters.set(TICameraParameters::KEY_IPP, valstr);
-                    restartPreviewRequired = true;
-                }
-            } else {
-                CAMHAL_LOGEB("ERROR: Invalid IPP mode: %s", valstr);
-                return BAD_VALUE;
             }
-        }
 
 #ifndef OMAP_TUNA
         if ( (valstr = params.get(TICameraParameters::KEY_S3D_PRV_FRAME_LAYOUT)) != NULL )
@@ -551,6 +490,18 @@ int CameraHal::setParameters(const android::CameraParameters& params)
             if(strcmp(valstr, android::CameraParameters::TRUE) == 0)
                 {
                 CAMHAL_LOGVB("Video Resolution: %d x %d", mVideoWidth, mVideoHeight);
+#ifdef OMAP_ENHANCEMENT_VTC
+                if (!mVTCUseCase)
+#endif
+                {
+                    int maxFPS, minFPS;
+
+                    params.getPreviewFpsRange(&minFPS, &maxFPS);
+                    maxFPS /= CameraHal::VFR_SCALE;
+                    if ( ( maxFPS <= SW_SCALING_FPS_LIMIT ) ) {
+                        getPreferredPreviewRes(&w, &h);
+                    }
+                }
                 mParameters.set(android::CameraParameters::KEY_RECORDING_HINT, valstr);
                 restartPreviewRequired |= setVideoModeParameters(params);
                 }
@@ -681,63 +632,54 @@ int CameraHal::setParameters(const android::CameraParameters& params)
 #endif
 
         // Variable framerate ranges have higher priority over
-        // deprecated constant FPS.
-        // There is possible 3 situations :
-        // 1) User change FPS range and HAL use it for fps port value (don't care about
-        //    changed or not const FPS).
-        // 2) User change single FPS and not change FPS range - will be applyed single FPS value
-        //    to port.
-        // 3) Both FPS range and const FPS are unchanged - FPS range will be applied to port.
-
-        int curFramerate = 0;
-        bool frameRangeUpdated = false, fpsUpdated = false;
-        int curMaxFPS = 0, curMinFPS = 0, maxFPS = 0, minFPS = 0;
-
-        mParameters.getPreviewFpsRange(&curMinFPS, &curMaxFPS);
-        params.getPreviewFpsRange(&minFPS, &maxFPS);
-
-        curFramerate = mParameters.getPreviewFrameRate();
-        framerate = params.getPreviewFrameRate();
-
+        // deprecated constant FPS. "KEY_PREVIEW_FPS_RANGE" should
+        // be cleared by the client in order for constant FPS to get
+        // applied.
+        // If Port FPS needs to be used for configuring, then FPS RANGE should not be set by the APP.
         valstr = params.get(android::CameraParameters::KEY_PREVIEW_FPS_RANGE);
-        if (valstr != NULL && strlen(valstr) &&
-                ((curMaxFPS != maxFPS) || (curMinFPS != minFPS))) {
-            CAMHAL_LOGDB("## current minFPS = %d; maxFPS=%d", curMinFPS, curMaxFPS);
-            CAMHAL_LOGDB("## requested minFPS = %d; maxFPS=%d", minFPS, maxFPS);
+        if (valstr != NULL && strlen(valstr)) {
+            int curMaxFPS = 0;
+            int curMinFPS = 0;
+
+            // APP wants to set FPS range
+            // Set framerate = MAXFPS
+            CAMHAL_LOGDA("APP IS CHANGING FRAME RATE RANGE");
+
+            mParameters.getPreviewFpsRange(&curMinFPS, &curMaxFPS);
+            CAMHAL_LOGDB("## current minFPS = %d; maxFPS=%d",curMinFPS, curMaxFPS);
+
+            params.getPreviewFpsRange(&minFPS, &maxFPS);
+            CAMHAL_LOGDB("## requested minFPS = %d; maxFPS=%d",minFPS, maxFPS);
+            // Validate VFR
             if (!isFpsRangeValid(minFPS, maxFPS, params.get(android::CameraParameters::KEY_SUPPORTED_PREVIEW_FPS_RANGE)) &&
                 !isFpsRangeValid(minFPS, maxFPS, params.get(TICameraParameters::KEY_FRAMERATE_RANGES_EXT_SUPPORTED))) {
-                CAMHAL_LOGEA("Trying to set invalid FPS Range (%d,%d)", minFPS, maxFPS);
+                CAMHAL_LOGEA("Invalid FPS Range");
                 return BAD_VALUE;
+            } else {
+                framerate = maxFPS / CameraHal::VFR_SCALE;
+                mParameters.setPreviewFrameRate(framerate);
+                CAMHAL_LOGDB("SET FRAMERATE %d", framerate);
+                mParameters.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, valstr);
+                CAMHAL_LOGDB("FPS Range = %s", valstr);
+                if ( curMaxFPS == (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) &&
+                     (unsigned int)maxFPS < (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) ) {
+                    restartPreviewRequired = true;
+                }
             }
-            mParameters.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, valstr);
-            CAMHAL_LOGDB("FPS Range = %s", valstr);
-            if ( curMaxFPS == (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) &&
-                (unsigned int) maxFPS < (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) ) {
-                restartPreviewRequired = true;
-            }
-            frameRangeUpdated = true;
-        }
-
-        valstr = params.get(android::CameraParameters::KEY_PREVIEW_FRAME_RATE);
-        if (valstr != NULL && strlen(valstr) && (framerate != curFramerate)) {
-            CAMHAL_LOGD("current framerate = %d reqested framerate = %d", curFramerate, framerate);
+        } else {
+            framerate = params.getPreviewFrameRate();
             if (!isParameterValid(framerate, params.get(android::CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES)) &&
                 !isParameterValid(framerate, params.get(TICameraParameters::KEY_FRAMERATES_EXT_SUPPORTED))) {
-                CAMHAL_LOGEA("Trying to set invalid frame rate %d", framerate);
+                CAMHAL_LOGEA("Invalid frame rate");
                 return BAD_VALUE;
             }
-            mParameters.setPreviewFrameRate(framerate);
-            CAMHAL_LOGDB("Set frame rate %d", framerate);
-            fpsUpdated = true;
-        }
-
-        if (frameRangeUpdated) {
-            mParameters.set(TICameraParameters::KEY_PREVIEW_FRAME_RATE_RANGE,
-                    mParameters.get(android::CameraParameters::KEY_PREVIEW_FPS_RANGE));
-        } else if (fpsUpdated) {
             char tmpBuffer[MAX_PROP_VALUE_LENGTH];
+
             sprintf(tmpBuffer, "%d,%d", framerate * CameraHal::VFR_SCALE, framerate * CameraHal::VFR_SCALE);
-            mParameters.set(TICameraParameters::KEY_PREVIEW_FRAME_RATE_RANGE, tmpBuffer);
+            mParameters.setPreviewFrameRate(framerate);
+            CAMHAL_LOGDB("SET FRAMERATE %d", framerate);
+            mParameters.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, tmpBuffer);
+            CAMHAL_LOGDB("FPS Range = %s", tmpBuffer);
         }
 
         if ((valstr = params.get(TICameraParameters::KEY_GBCE)) != NULL) {
@@ -1180,10 +1122,10 @@ int CameraHal::setParameters(const android::CameraParameters& params)
 
 #ifndef OMAP_TUNA
         //TI extensions for enable/disable algos
-        if( (valstr = params.get(TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA)) != NULL )
+        if( (valstr = params.get(TICameraParameters::KEY_ALGO_FIXED_GAMMA)) != NULL )
             {
-            CAMHAL_LOGDB("External Gamma set %s", valstr);
-            mParameters.set(TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA, valstr);
+            CAMHAL_LOGDB("Fixed Gamma set %s", valstr);
+            mParameters.set(TICameraParameters::KEY_ALGO_FIXED_GAMMA, valstr);
             }
 
         if( (valstr = params.get(TICameraParameters::KEY_ALGO_NSF1)) != NULL )
@@ -1214,12 +1156,6 @@ int CameraHal::setParameters(const android::CameraParameters& params)
             {
             CAMHAL_LOGDB("Green Inballance Correction set %s", valstr);
             mParameters.set(TICameraParameters::KEY_ALGO_GIC, valstr);
-            }
-
-        if( (valstr = params.get(TICameraParameters::KEY_GAMMA_TABLE)) != NULL )
-            {
-            CAMHAL_LOGDB("Manual gamma table set %s", valstr);
-            mParameters.set(TICameraParameters::KEY_GAMMA_TABLE, valstr);
             }
 #endif
 
@@ -1293,9 +1229,7 @@ int CameraHal::setParameters(const android::CameraParameters& params)
         // enabled or doesSetParameterNeedUpdate says so. Initial setParameters to camera adapter,
         // will be called in startPreview()
         // TODO(XXX): Need to identify other parameters that need update from camera adapter
-        if ( (NULL != mCameraAdapter) &&
-             (mPreviewEnabled || updateRequired) &&
-             (!(mPreviewEnabled && restartPreviewRequired)) ) {
+        if ( (NULL != mCameraAdapter) && (mPreviewEnabled || updateRequired) && !restartPreviewRequired ) {
             ret |= mCameraAdapter->setParameters(adapterParams);
         }
 
@@ -1333,17 +1267,8 @@ int CameraHal::setParameters(const android::CameraParameters& params)
         ret = restartPreview();
     } else if (restartPreviewRequired && !previewEnabled() &&
                 mDisplayPaused && !mRecordingEnabled) {
-        CAMHAL_LOGDA("Restarting preview in paused mode");
-        ret = restartPreview();
-
-        // TODO(XXX): If there is some delay between the restartPreview call and the code
-        // below, then the user could see some preview frames and callbacks. Let's find
-        // a better place to put this later...
-        if (ret == NO_ERROR) {
-            mDisplayPaused = true;
-            mPreviewEnabled = false;
-            ret = mDisplayAdapter->pauseDisplay(mDisplayPaused);
-        }
+        CAMHAL_LOGDA("Stopping Preview");
+        forceStopPreview();
     }
 
     if ( !mBracketingRunning && mBracketingEnabled ) {
@@ -1500,40 +1425,52 @@ status_t CameraHal::freePreviewDataBufs()
 }
 
 status_t CameraHal::allocImageBufs(unsigned int width, unsigned int height, size_t size,
-                                   const char* previewFormat, unsigned int bufferCount)
+                                   const char* previewFormat, unsigned int bufferCount,
+                                   unsigned int *max_queueable)
 {
     status_t ret = NO_ERROR;
-    int bytes = size;
+    int bytes;
 
     LOG_FUNCTION_NAME;
 
+    bytes = size;
+
     // allocate image buffers only if not already allocated
     if(NULL != mImageBuffers) {
+        if (mBufferSourceAdapter_Out.get()) {
+            mBufferSourceAdapter_Out->maxQueueableBuffers(*max_queueable);
+        } else {
+            *max_queueable = bufferCount;
+        }
         return NO_ERROR;
     }
 
-    if ( NO_ERROR == ret ) {
-        bytes = ((bytes+4095)/4096)*4096;
+    if (mBufferSourceAdapter_Out.get()) {
+        mImageBuffers = mBufferSourceAdapter_Out->allocateBufferList(width, height, previewFormat,
+                                                                     bytes, bufferCount);
+        mBufferSourceAdapter_Out->maxQueueableBuffers(*max_queueable);
+    } else {
+        bytes = ((bytes + 4095) / 4096) * 4096;
         mImageBuffers = mMemoryManager->allocateBufferList(0, 0, previewFormat, bytes, bufferCount);
-        CAMHAL_LOGDB("Size of Image cap buffer = %d", bytes);
-        if( NULL == mImageBuffers ) {
-            CAMHAL_LOGEA("Couldn't allocate image buffers using memory manager");
-            ret = -NO_MEMORY;
-        } else {
-            bytes = size;
-        }
+        *max_queueable = bufferCount;
+    }
+
+    CAMHAL_LOGDB("Size of Image cap buffer = %d", bytes);
+    if ( NULL == mImageBuffers ) {
+        CAMHAL_LOGEA("Couldn't allocate image buffers using memory manager");
+        ret = -NO_MEMORY;
+    } else {
+        bytes = size;
     }
 
     if ( NO_ERROR == ret ) {
         mImageFd = mMemoryManager->getFd();
         mImageLength = bytes;
         mImageOffsets = mMemoryManager->getOffsets();
-        mImageCount = bufferCount;
     } else {
         mImageFd = -1;
         mImageLength = 0;
         mImageOffsets = NULL;
-        mImageCount = 0;
     }
 
     LOG_FUNCTION_NAME_EXIT;
@@ -1696,12 +1633,14 @@ status_t CameraHal::freeImageBufs()
     }
 
     if (mBufferSourceAdapter_Out.get()) {
-        mBufferSourceAdapter_Out = 0;
+        ret = mBufferSourceAdapter_Out->freeBufferList(mImageBuffers);
     } else {
         ret = mMemoryManager->freeBufferList(mImageBuffers);
     }
 
-    mImageBuffers = NULL;
+    if (ret == NO_ERROR) {
+        mImageBuffers = NULL;
+    }
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -2089,16 +2028,8 @@ status_t CameraHal::setPreviewWindow(struct preview_stream_ops *window)
     {
         // Need to create the display adapter since it has not been created
         // Create display adapter
-        ANativeWindowDisplayAdapter* displayAdapter = new ANativeWindowDisplayAdapter();
-        displayAdapter->setExternalLocking(mExternalLocking);
-        if (NULL != mAppCallbackNotifier.get()) {
-            mAppCallbackNotifier->setExternalLocking(mExternalLocking);
-        } else {
-            CAMHAL_LOGE("Can't apply locking policy on AppCallbackNotifier");
-            CAMHAL_ASSERT(0);
-        }
-        mDisplayAdapter = displayAdapter;
-#ifdef OMAP_ENHANCEMENT_CPCAM
+        mDisplayAdapter = new ANativeWindowDisplayAdapter();
+#ifdef OMAP_ENHANCEMENT
         mDisplayAdapter->setExtendedOps(mExtendedPreviewStreamOps);
 #endif
         ret = NO_ERROR;
@@ -2165,292 +2096,6 @@ void CameraHal::setExtendedPreviewStreamOps(preview_stream_extended_ops_t *ops)
 }
 
 /**
-   @brief Sets Tapout Surfaces.
-
-   Buffers provided to CameraHal via this object for tap-out
-   functionality.
-
-   @param[in] window The ANativeWindow object created by Surface flinger
-   @return NO_ERROR If the ANativeWindow object passes validation criteria
-   @todo Define validation criteria for ANativeWindow object. Define error codes for scenarios
-
- */
-status_t CameraHal::setTapoutLocked(struct preview_stream_ops *tapout)
-{
-    status_t ret = NO_ERROR;
-    int index = -1;
-
-    LOG_FUNCTION_NAME;
-
-    if (!tapout) {
-        CAMHAL_LOGD("Missing argument");
-        LOG_FUNCTION_NAME_EXIT;
-        return NO_ERROR;
-    }
-
-    // Set tapout point
-    // 1. Check name of tap-out
-    // 2. If not already set, then create a new one
-    // 3. Allocate buffers. If user is re-setting the surface, free buffers first and re-allocate
-    //    in case dimensions have changed
-
-    for (unsigned int i = 0; i < mOutAdapters.size(); i++) {
-        android::sp<DisplayAdapter> out;
-        out = mOutAdapters.itemAt(i);
-        ret = out->setPreviewWindow(tapout);
-        if (ret == ALREADY_EXISTS) {
-            CAMHAL_LOGD("Tap Out already set at index = %d", i);
-            index = i;
-            ret = NO_ERROR;
-        }
-    }
-
-    if (index < 0) {
-        android::sp<DisplayAdapter> out  = new BufferSourceAdapter();
-
-        ret = out->initialize();
-        if (ret != NO_ERROR) {
-            out.clear();
-            CAMHAL_LOGEA("DisplayAdapter initialize failed");
-            goto exit;
-        }
-
-        // BufferSourceAdapter will be handler of the extended OPS
-        out->setExtendedOps(mExtendedPreviewStreamOps);
-
-        // CameraAdapter will be the frame provider for BufferSourceAdapter
-        out->setFrameProvider(mCameraAdapter);
-
-        // BufferSourceAdapter will use ErrorHandler to send errors back to
-        // the application
-        out->setErrorHandler(mAppCallbackNotifier.get());
-
-        // Update the display adapter with the new window that is passed from CameraService
-        ret  = out->setPreviewWindow(tapout);
-        if(ret != NO_ERROR) {
-            CAMHAL_LOGEB("DisplayAdapter setPreviewWindow returned error %d", ret);
-            goto exit;
-        }
-
-        if (NULL != mCameraAdapter) {
-            unsigned int bufferCount, max_queueable;
-            CameraFrame frame;
-
-            bufferCount = out->getBufferCount();
-            if (bufferCount < 1) bufferCount = NO_BUFFERS_IMAGE_CAPTURE_SYSTEM_HEAP;
-
-            ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_QUERY_BUFFER_SIZE_IMAGE_CAPTURE,
-                                                  ( int ) &frame,
-                                                  bufferCount);
-            if (NO_ERROR != ret) {
-                CAMHAL_LOGEB("CAMERA_QUERY_BUFFER_SIZE_IMAGE_CAPTURE returned error 0x%x", ret);
-            }
-            if (NO_ERROR == ret) {
-                CameraBuffer *bufs = NULL;
-                unsigned int stride;
-                unsigned int height = frame.mHeight;
-                int size = frame.mLength;
-
-                stride = frame.mAlignment / getBPP(mParameters.getPictureFormat());
-                bufs = out->allocateBufferList(stride,
-                                               height,
-                                               mParameters.getPictureFormat(),
-                                               size,
-                                               bufferCount);
-                if (bufs == NULL){
-                    CAMHAL_LOGEB("error allocating buffer list");
-                    goto exit;
-                }
-            }
-        }
-        mOutAdapters.add(out);
-    }
-
-exit:
-
-    LOG_FUNCTION_NAME_EXIT;
-
-    return ret;
-}
-
-/**
-   @brief Releases Tapout Surfaces.
-
-   @param[in] window The ANativeWindow object created by Surface flinger
-   @return NO_ERROR If the ANativeWindow object passes validation criteria
-   @todo Define validation criteria for ANativeWindow object. Define error codes for scenarios
-
- */
-status_t CameraHal::releaseTapoutLocked(struct preview_stream_ops *tapout)
-{
-    status_t ret = NO_ERROR;
-    char id[OP_STR_SIZE];
-
-    LOG_FUNCTION_NAME;
-
-    if (!tapout) {
-        CAMHAL_LOGD("Missing argument");
-        LOG_FUNCTION_NAME_EXIT;
-        return NO_ERROR;
-    }
-
-    // Get the name of tapout
-    ret = mExtendedPreviewStreamOps->get_id(tapout, id, sizeof(id));
-    if (NO_ERROR != ret) {
-        CAMHAL_LOGEB("get_id OPS returned error %d", ret);
-        return ret;
-    }
-
-    // 1. Check name of tap-out
-    // 2. If exist, then free buffers and then remove it
-    if (mBufferSourceAdapter_Out.get() && mBufferSourceAdapter_Out->match(id)) {
-        CAMHAL_LOGD("REMOVE tap out %p previously set as current", tapout);
-        mBufferSourceAdapter_Out.clear();
-    }
-    for (unsigned int i = 0; i < mOutAdapters.size(); i++) {
-        android::sp<DisplayAdapter> out;
-        out = mOutAdapters.itemAt(i);
-        if (out->match(id)) {
-            CAMHAL_LOGD("REMOVE tap out %p \"%s\" at position %d", tapout, id, i);
-            mOutAdapters.removeAt(i);
-            break;
-        }
-    }
-
-    LOG_FUNCTION_NAME_EXIT;
-
-    return ret;
-}
-
-/**
-   @brief Sets Tapin Surfaces.
-
-   Buffers provided to CameraHal via this object for tap-in
-   functionality.
-
-   @param[in] window The ANativeWindow object created by Surface flinger
-   @return NO_ERROR If the ANativeWindow object passes validation criteria
-   @todo Define validation criteria for ANativeWindow object. Define error codes for scenarios
-
- */
-status_t CameraHal::setTapinLocked(struct preview_stream_ops *tapin)
-{
-    status_t ret = NO_ERROR;
-    int index = -1;
-
-    LOG_FUNCTION_NAME;
-
-    if (!tapin) {
-        CAMHAL_LOGD("Missing argument");
-        LOG_FUNCTION_NAME_EXIT;
-        return NO_ERROR;
-    }
-
-    // 1. Set tapin point
-    // 1. Check name of tap-in
-    // 2. If not already set, then create a new one
-    // 3. Allocate buffers. If user is re-setting the surface, free buffers first and re-allocate
-    //    in case dimensions have changed
-    for (unsigned int i = 0; i < mInAdapters.size(); i++) {
-        android::sp<DisplayAdapter> in;
-        in = mInAdapters.itemAt(i);
-        ret = in->setPreviewWindow(tapin);
-        if (ret == ALREADY_EXISTS) {
-            CAMHAL_LOGD("Tap In already set at index = %d", i);
-            index = i;
-            ret = NO_ERROR;
-        }
-    }
-
-    if (index < 0) {
-        android::sp<DisplayAdapter> in  = new BufferSourceAdapter();
-
-        ret = in->initialize();
-        if (ret != NO_ERROR) {
-            in.clear();
-            CAMHAL_LOGEA("DisplayAdapter initialize failed");
-            goto exit;
-        }
-
-        // BufferSourceAdapter will be handler of the extended OPS
-        in->setExtendedOps(mExtendedPreviewStreamOps);
-
-        // CameraAdapter will be the frame provider for BufferSourceAdapter
-        in->setFrameProvider(mCameraAdapter);
-
-        // BufferSourceAdapter will use ErrorHandler to send errors back to
-        // the application
-        in->setErrorHandler(mAppCallbackNotifier.get());
-
-        // Update the display adapter with the new window that is passed from CameraService
-        ret  = in->setPreviewWindow(tapin);
-        if(ret != NO_ERROR) {
-            CAMHAL_LOGEB("DisplayAdapter setPreviewWindow returned error %d", ret);
-            goto exit;
-        }
-
-        mInAdapters.add(in);
-    }
-
-exit:
-
-    LOG_FUNCTION_NAME_EXIT;
-
-    return ret;
-}
-
-
-/**
-   @brief Releases Tapin Surfaces.
-
-   @param[in] window The ANativeWindow object created by Surface flinger
-   @return NO_ERROR If the ANativeWindow object passes validation criteria
-   @todo Define validation criteria for ANativeWindow object. Define error codes for scenarios
-
- */
-status_t CameraHal::releaseTapinLocked(struct preview_stream_ops *tapin)
-{
-    status_t ret = NO_ERROR;
-    char id[OP_STR_SIZE];
-
-    LOG_FUNCTION_NAME;
-
-    if (!tapin) {
-        CAMHAL_LOGD("Missing argument");
-        LOG_FUNCTION_NAME_EXIT;
-        return NO_ERROR;
-    }
-
-    // Get the name of tapin
-    ret = mExtendedPreviewStreamOps->get_id(tapin, id, sizeof(id));
-    if (NO_ERROR != ret) {
-        CAMHAL_LOGEB("get_id OPS returned error %d", ret);
-        return ret;
-    }
-
-    // 1. Check name of tap-in
-    // 2. If exist, then free buffers and then remove it
-    if (mBufferSourceAdapter_In.get() && mBufferSourceAdapter_In->match(id)) {
-        CAMHAL_LOGD("REMOVE tap in %p previously set as current", tapin);
-        mBufferSourceAdapter_In.clear();
-    }
-    for (unsigned int i = 0; i < mInAdapters.size(); i++) {
-        android::sp<DisplayAdapter> in;
-        in = mInAdapters.itemAt(i);
-        if (in->match(id)) {
-            CAMHAL_LOGD("REMOVE tap in %p \"%s\" at position %d", tapin, id, i);
-            mInAdapters.removeAt(i);
-            break;
-        }
-    }
-
-    LOG_FUNCTION_NAME_EXIT;
-
-    return ret;
-}
-
-
-/**
    @brief Sets ANativeWindow object.
 
    Buffers provided to CameraHal via this object for tap-in/tap-out
@@ -2467,73 +2112,120 @@ status_t CameraHal::releaseTapinLocked(struct preview_stream_ops *tapin)
 status_t CameraHal::setBufferSource(struct preview_stream_ops *tapin, struct preview_stream_ops *tapout)
 {
     status_t ret = NO_ERROR;
-    int index = -1;
 
     LOG_FUNCTION_NAME;
 
-    android::AutoMutex lock(mLock);
+   // If either a tapin or tapout was previously set
+   // we need to clean up and clear capturing
+   if ((!tapout && mBufferSourceAdapter_Out.get()) ||
+       (!tapin && mBufferSourceAdapter_In.get())) {
+       signalEndImageCapture();
+   }
 
-    CAMHAL_LOGD ("setBufferSource(%p, %p)", tapin, tapout);
+   // Set tapout point
+   // destroy current buffer tapout if NULL tapout is passed
+    if (!tapout) {
+        if (mBufferSourceAdapter_Out.get() != NULL) {
+            CAMHAL_LOGD("NULL tapout passed, destroying buffer tapout adapter");
+            mBufferSourceAdapter_Out.clear();
+            mBufferSourceAdapter_Out = 0;
+        }
+        ret = NO_ERROR;
+    } else if (mBufferSourceAdapter_Out.get() == NULL) {
+        mBufferSourceAdapter_Out = new BufferSourceAdapter();
+        mBufferSourceAdapter_Out->setExtendedOps(mExtendedPreviewStreamOps);
+        if(!mBufferSourceAdapter_Out.get()) {
+            CAMHAL_LOGEA("Couldn't create DisplayAdapter");
+            ret = NO_MEMORY;
+            goto exit;
+        }
 
-    ret = setTapoutLocked(tapout);
-    if (ret != NO_ERROR) {
-        CAMHAL_LOGE("setTapoutLocked returned error 0x%x", ret);
-        goto exit;
-    }
+        ret = mBufferSourceAdapter_Out->initialize();
+        if (ret != NO_ERROR)
+        {
+            mBufferSourceAdapter_Out.clear();
+            mBufferSourceAdapter_Out = 0;
+            CAMHAL_LOGEA("DisplayAdapter initialize failed");
+            goto exit;
+        }
 
-    ret = setTapinLocked(tapin);
-    if (ret != NO_ERROR) {
-        CAMHAL_LOGE("setTapinLocked returned error 0x%x", ret);
-        goto exit;
-    }
+        // CameraAdapter will be the frame provider for BufferSourceAdapter
+        mBufferSourceAdapter_Out->setFrameProvider(mCameraAdapter);
 
-exit:
-    LOG_FUNCTION_NAME_EXIT;
+        // BufferSourceAdapter will use ErrorHandler to send errors back to
+        // the application
+        mBufferSourceAdapter_Out->setErrorHandler(mAppCallbackNotifier.get());
 
-    return ret;
-}
-
-
-/**
-   @brief Releases ANativeWindow object.
-
-   Release Buffers previously released with setBufferSource()
-
-   TODO(XXX): this is just going to use preview_stream_ops for now, but we
-   most likely need to extend it when we want more functionality
-
-   @param[in] window The ANativeWindow object created by Surface flinger
-   @return NO_ERROR If the ANativeWindow object passes validation criteria
-   @todo Define validation criteria for ANativeWindow object. Define error codes for scenarios
-
- */
-status_t CameraHal::releaseBufferSource(struct preview_stream_ops *tapin, struct preview_stream_ops *tapout)
-{
-    status_t ret = NO_ERROR;
-    int index = -1;
-
-    LOG_FUNCTION_NAME;
-
-    android::AutoMutex lock(mLock);
-    CAMHAL_LOGD ("releaseBufferSource(%p, %p)", tapin, tapout);
-    if (tapout) {
-        ret |= releaseTapoutLocked(tapout);
-        if (ret != NO_ERROR) {
-            CAMHAL_LOGE("Error %d to release tap out", ret);
+        // Update the display adapter with the new window that is passed from CameraService
+        ret  = mBufferSourceAdapter_Out->setPreviewWindow(tapout);
+        if(ret != NO_ERROR) {
+            CAMHAL_LOGEB("DisplayAdapter setPreviewWindow returned error %d", ret);
+            goto exit;
+        }
+    } else {
+        // Update the display adapter with the new window that is passed from CameraService
+        freeImageBufs();
+        ret = mBufferSourceAdapter_Out->setPreviewWindow(tapout);
+        if (ret == ALREADY_EXISTS) {
+            // ALREADY_EXISTS should be treated as a noop in this case
+            ret = NO_ERROR;
         }
     }
 
-    if (tapin) {
-        ret |= releaseTapinLocked(tapin);
-        if (ret != NO_ERROR) {
-            CAMHAL_LOGE("Error %d to release tap in", ret);
+    if (ret != NO_ERROR) {
+       CAMHAL_LOGE("Error while trying to set tapout point");
+       goto exit;
+    }
+
+   // 1. Set tapin point
+    if (!tapin) {
+        if (mBufferSourceAdapter_In.get() != NULL) {
+            CAMHAL_LOGD("NULL tapin passed, destroying buffer tapin adapter");
+            mBufferSourceAdapter_In.clear();
+            mBufferSourceAdapter_In = 0;
+        }
+        ret = NO_ERROR;
+    } else if (mBufferSourceAdapter_In.get() == NULL) {
+        mBufferSourceAdapter_In = new BufferSourceAdapter();
+        mBufferSourceAdapter_In->setExtendedOps(mExtendedPreviewStreamOps);
+        if(!mBufferSourceAdapter_In.get()) {
+            CAMHAL_LOGEA("Couldn't create DisplayAdapter");
+            ret = NO_MEMORY;
+            goto exit;
+        }
+
+        ret = mBufferSourceAdapter_In->initialize();
+        if (ret != NO_ERROR)
+        {
+            mBufferSourceAdapter_In.clear();
+            mBufferSourceAdapter_In = 0;
+            CAMHAL_LOGEA("DisplayAdapter initialize failed");
+            goto exit;
+        }
+
+        // We need to set a frame provider so camera adapter can return the frame back to us
+        mBufferSourceAdapter_In->setFrameProvider(mCameraAdapter);
+
+        // BufferSourceAdapter will use ErrorHandler to send errors back to
+        // the application
+        mBufferSourceAdapter_In->setErrorHandler(mAppCallbackNotifier.get());
+
+        // Update the display adapter with the new window that is passed from CameraService
+        ret  = mBufferSourceAdapter_In->setPreviewWindow(tapin);
+        if(ret != NO_ERROR) {
+            CAMHAL_LOGEB("DisplayAdapter setPreviewWindow returned error %d", ret);
+            goto exit;
+        }
+    } else {
+        // Update the display adapter with the new window that is passed from CameraService
+        ret = mBufferSourceAdapter_In->setPreviewWindow(tapin);
+        if (ret == ALREADY_EXISTS) {
+            // ALREADY_EXISTS should be treated as a noop in this case
+            ret = NO_ERROR;
         }
     }
 
-exit:
-
-    LOG_FUNCTION_NAME_EXIT;
-
+ exit:
     return ret;
 }
 #endif
@@ -2724,42 +2416,31 @@ bool CameraHal::setVideoModeParameters(const android::CameraParameters& params)
     // Set CAPTURE_MODE to VIDEO_MODE, if not set already and Restart Preview
     valstr = mParameters.get(TICameraParameters::KEY_CAP_MODE);
     if ( (valstr == NULL) ||
-        ( (valstr != NULL) && ( (strcmp(valstr, (const char *) TICameraParameters::VIDEO_MODE) != 0) &&
-                                (strcmp(valstr, (const char *) TICameraParameters::VIDEO_MODE_HQ ) != 0) ) ) ) {
+        ( (valstr != NULL) && (strcmp(valstr, (const char *) TICameraParameters::VIDEO_MODE) != 0) ) )
+        {
         CAMHAL_LOGDA("Set CAPTURE_MODE to VIDEO_MODE");
         mParameters.set(TICameraParameters::KEY_CAP_MODE, (const char *) TICameraParameters::VIDEO_MODE);
         restartPreviewRequired = true;
-    }
+        }
 
-    // set VSTAB, restart is required if VSTAB value has changed
-    int prevWidth, prevHeight;
-    params.getPreviewSize(&prevWidth, &prevHeight);
-    valstr = mParameters.get(android::CameraParameters::KEY_VIDEO_STABILIZATION);
-    if (prevWidth == 1920 &&
-        (mSocFamily == SocFamily_Omap4430 || mSocFamily == SocFamily_Omap4460)) {
-        // forcibly set to false because of not enough memory for needed buffer size in this case
-        CAMHAL_LOGDA("Forcing VSTAB off");
-        if (strcmp(valstr, android::CameraParameters::FALSE) != 0) {
-            restartPreviewRequired = true;
-        }
-        mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION,
-                        android::CameraParameters::FALSE);
-    } else {
-        if ((valstrRemote = params.get(android::CameraParameters::KEY_VIDEO_STABILIZATION)) != NULL) {
-            // make sure we support vstab
-            if (strcmp(mCameraProperties->get(CameraProperties::VSTAB_SUPPORTED),
-                       android::CameraParameters::TRUE) == 0) {
-                if (strcmp(valstr, valstrRemote) != 0) {
-                    restartPreviewRequired = true;
-                }
-                mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION,
-                                valstrRemote);
+    // set VSTAB. restart is required if vstab value has changed
+    if ( (valstrRemote = params.get(android::CameraParameters::KEY_VIDEO_STABILIZATION)) != NULL ) {
+        // make sure we support vstab
+        if (strcmp(mCameraProperties->get(CameraProperties::VSTAB_SUPPORTED),
+                   android::CameraParameters::TRUE) == 0) {
+            valstr = mParameters.get(android::CameraParameters::KEY_VIDEO_STABILIZATION);
+            // vstab value has changed
+            if ((valstr != NULL) &&
+                 strcmp(valstr, valstrRemote) != 0) {
+                restartPreviewRequired = true;
             }
-        } else if (mParameters.get(android::CameraParameters::KEY_VIDEO_STABILIZATION)) {
-            // vstab was configured but now unset
-            restartPreviewRequired = true;
-            mParameters.remove(android::CameraParameters::KEY_VIDEO_STABILIZATION);
+            mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION,
+                            valstrRemote);
         }
+    } else if (mParameters.get(android::CameraParameters::KEY_VIDEO_STABILIZATION)) {
+        // vstab was configured but now unset
+        restartPreviewRequired = true;
+        mParameters.remove(android::CameraParameters::KEY_VIDEO_STABILIZATION);
     }
 
     // Set VNF
@@ -2855,6 +2536,7 @@ status_t CameraHal::restartPreview()
         android::AutoMutex lock(mLock);
         if (!mCapModeBackup.isEmpty()) {
             mParameters.set(TICameraParameters::KEY_CAP_MODE, mCapModeBackup.string());
+            mCapModeBackup = "";
         } else {
             mParameters.set(TICameraParameters::KEY_CAP_MODE, "");
         }
@@ -2998,7 +2680,7 @@ status_t CameraHal::autoFocus()
             goto EXIT;
         }
 
-    if ((state == CameraAdapter::AF_STATE) || (state == CameraAdapter::VIDEO_AF_STATE))
+    if (state == CameraAdapter::AF_STATE)
         {
             CAMHAL_LOGI("Ignoring start-AF (already in progress)");
             goto EXIT;
@@ -3151,6 +2833,7 @@ status_t CameraHal::startImageBracketing()
 
         if ( NO_ERROR == ret )
             {
+            unsigned int bufferCount = mBracketRangeNegative + 1;
             mParameters.getPictureSize(( int * ) &frame.mWidth,
                                        ( int * ) &frame.mHeight);
 
@@ -3158,7 +2841,9 @@ status_t CameraHal::startImageBracketing()
                                  frame.mHeight,
                                  frame.mLength,
                                  mParameters.getPictureFormat(),
-                                 ( mBracketRangeNegative + 1 ));
+                                 bufferCount,
+                                 &max_queueable);
+            mBracketRangeNegative = bufferCount - 1;
             if ( NO_ERROR != ret )
               {
                 CAMHAL_LOGEB("allocImageBufs returned error 0x%x", ret);
@@ -3173,7 +2858,7 @@ status_t CameraHal::startImageBracketing()
             desc.mFd = mImageFd;
             desc.mLength = mImageLength;
             desc.mCount = ( size_t ) ( mBracketRangeNegative + 1 );
-            desc.mMaxQueueable = ( size_t ) ( mBracketRangeNegative + 1 );
+            desc.mMaxQueueable = ( size_t) max_queueable;
 
             ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_USE_BUFFERS_IMAGE_CAPTURE,
                                               ( int ) &desc);
@@ -3228,12 +2913,6 @@ status_t CameraHal::stopImageBracketing()
  */
 status_t CameraHal::takePicture(const char *params)
 {
-    // cancel AF state if needed (before any operation and mutex lock)
-    if ((mCameraAdapter->getState() == CameraAdapter::AF_STATE) ||
-        (mCameraAdapter->getState() == CameraAdapter::VIDEO_AF_STATE)) {
-        cancelAutoFocus();
-    }
-
     android::AutoMutex lock(mLock);
     return __takePicture(params);
 }
@@ -3246,8 +2925,13 @@ status_t CameraHal::takePicture(const char *params)
    @todo Define error codes if unable to switch to image capture
 
  */
-status_t CameraHal::__takePicture(const char *params, struct timeval *captureStart)
+status_t CameraHal::__takePicture(const char *params)
 {
+    // cancel AF state if needed (before any operation and mutex lock)
+    if (mCameraAdapter->getState() == CameraAdapter::AF_STATE) {
+        cancelAutoFocus();
+    }
+
     status_t ret = NO_ERROR;
     CameraFrame frame;
     CameraAdapter::BuffersDescriptor desc;
@@ -3257,16 +2941,10 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
     unsigned int max_queueable = 0;
     unsigned int rawBufferCount = 1;
     bool isCPCamMode = false;
-    android::sp<DisplayAdapter> outAdapter = 0;
-    bool reuseTapout = false;
 
 #if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
 
-    if ( NULL == captureStart ) {
-        gettimeofday(&mStartCapture, NULL);
-    } else {
-        memcpy(&mStartCapture, captureStart, sizeof(struct timeval));
-    }
+    gettimeofday(&mStartCapture, NULL);
 
 #endif
 
@@ -3296,8 +2974,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
 
     // we only support video snapshot if we are in video mode (recording hint is set)
     if ( (mCameraAdapter->getState() == CameraAdapter::VIDEO_STATE) &&
-         (valstr && ( strcmp(valstr, TICameraParameters::VIDEO_MODE) &&
-                      strcmp(valstr, TICameraParameters::VIDEO_MODE_HQ ) ) ) ) {
+         (valstr && strcmp(valstr, TICameraParameters::VIDEO_MODE)) ) {
         CAMHAL_LOGEA("Trying to capture while recording without recording hint set...");
         return INVALID_OPERATION;
     }
@@ -3306,7 +2983,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
     // check if camera application is using shots parameters
     // api. parameters set here override anything set using setParameters
     // TODO(XXX): Just going to use legacy TI parameters for now. Need
-    // add new APIs in CameraHal to utilize android::ShotParameters later, so
+    // add new APIs in CameraHal to utilize ShotParameters later, so
     // we don't have to parse through the whole set of parameters
     // in camera adapter
     if (strlen(params) > 0) {
@@ -3346,26 +3023,6 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
             }
         }
 
-        valStr = shotParams.get(android::ShotParameters::KEY_CURRENT_TAP_OUT);
-        if (valStr != NULL) {
-            int index = -1;
-            for (unsigned int i = 0; i < mOutAdapters.size(); i++) {
-                if(mOutAdapters.itemAt(i)->match(valStr)) {
-                    index = i;
-                    break;
-                }
-            }
-            if (index < 0) {
-                CAMHAL_LOGE("Invalid tap out surface passed to camerahal");
-                return BAD_VALUE;
-            }
-            CAMHAL_LOGD("Found matching out adapter at %d", index);
-            outAdapter = mOutAdapters.itemAt(index);
-            if ( outAdapter == mBufferSourceAdapter_Out ) {
-                reuseTapout = true;
-            }
-        }
-
         mCameraAdapter->setParameters(mParameters);
     } else
 #endif
@@ -3374,19 +3031,11 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
         // when we remove legacy TI parameters implementation
     }
 
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    CameraHal::PPM("Takepicture parameters set: ", &mStartCapture);
-
-#endif
-
-    // if we are already in the middle of a capture and using the same
-    // tapout ST...then we just need setParameters and start image
-    // capture to queue more shots
+    // if we are already in the middle of a capture...then we just need
+    // setParameters and start image capture to queue more shots
     if (((mCameraAdapter->getState() & CameraAdapter::CAPTURE_STATE) ==
               CameraAdapter::CAPTURE_STATE) &&
-         (mCameraAdapter->getNextState() != CameraAdapter::PREVIEW_STATE) &&
-         (reuseTapout) ) {
+         (mCameraAdapter->getNextState() != CameraAdapter::PREVIEW_STATE)) {
 #if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
         //pass capture timestamp along with the camera adapter command
         ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_START_IMAGE_CAPTURE,
@@ -3399,7 +3048,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
 
     if ( !mBracketingRunning )
     {
-         // if application didn't set burst through android::ShotParameters
+         // if application didn't set burst through ShotParameters
          // then query from TICameraParameters
          if ((burst == -1) && (NO_ERROR == ret)) {
             burst = mParameters.getInt(TICameraParameters::KEY_BURST);
@@ -3411,15 +3060,10 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
              bufferCount = isCPCamMode || (burst > CameraHal::NO_BUFFERS_IMAGE_CAPTURE) ?
                                CameraHal::NO_BUFFERS_IMAGE_CAPTURE : burst;
 
-             if (outAdapter.get()) {
-                if ( reuseTapout ) {
-                    bufferCount = mImageCount;
-                } else {
-                    bufferCount = outAdapter->getBufferCount();
-                    if (bufferCount < 1) {
-                        bufferCount = NO_BUFFERS_IMAGE_CAPTURE_SYSTEM_HEAP;
-                    }
-                }
+             if (mBufferSourceAdapter_Out.get()) {
+                 // TODO(XXX): Temporarily increase number of buffers we can allocate from ANW
+                 // until faux-NPA mode is implemented
+                 bufferCount = NO_BUFFERS_IMAGE_CAPTURE_SYSTEM_HEAP;
              }
 
              if ( NULL != mAppCallbackNotifier.get() ) {
@@ -3439,8 +3083,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
         // pause preview during normal image capture
         // do not pause preview if recording (video state)
         if ( (NO_ERROR == ret) && (NULL != mDisplayAdapter.get()) ) {
-            if ((mCameraAdapter->getState() != CameraAdapter::VIDEO_STATE) &&
-                (mCameraAdapter->getState() != CameraAdapter::VIDEO_AF_STATE)) {
+            if (mCameraAdapter->getState() != CameraAdapter::VIDEO_STATE) {
                 mDisplayPaused = true;
                 mPreviewEnabled = false;
                 ret = mDisplayAdapter->pauseDisplay(mDisplayPaused);
@@ -3456,8 +3099,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
         }
 
         // if we taking video snapshot...
-        if ((NO_ERROR == ret) && ((mCameraAdapter->getState() == CameraAdapter::VIDEO_STATE) ||
-            (mCameraAdapter->getState() == CameraAdapter::VIDEO_AF_STATE))) {
+        if ((NO_ERROR == ret) && (mCameraAdapter->getState() == CameraAdapter::VIDEO_STATE)) {
             // enable post view frames if not already enabled so we can internally
             // save snapshot frames for generating thumbnail
             if((mMsgEnabled & CAMERA_MSG_POSTVIEW_FRAME) == 0) {
@@ -3478,53 +3120,21 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
                 }
             }
 
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    CameraHal::PPM("Takepicture buffer size queried: ", &mStartCapture);
-
-#endif
-
-        if (outAdapter.get()) {
-            // Avoid locking the tapout again when reusing it
-            if (!reuseTapout) {
-                // Need to reset buffers if we are switching adapters since we don't know
-                // the state of the new buffer list
-                ret = outAdapter->maxQueueableBuffers(max_queueable);
-                if (NO_ERROR != ret) {
-                    CAMHAL_LOGE("Couldn't get max queuable");
-                    return ret;
-                }
-                mImageBuffers = outAdapter->getBuffers(true);
-                mImageOffsets = outAdapter->getOffsets();
-                mImageFd = outAdapter->getFd();
-                mImageLength = outAdapter->getSize();
-                mImageCount = bufferCount;
-                mBufferSourceAdapter_Out = outAdapter;
-            }
-        } else {
-            mBufferSourceAdapter_Out.clear();
-            // allocImageBufs will only allocate new buffers if mImageBuffers is NULL
-            if ( NO_ERROR == ret ) {
-                max_queueable = bufferCount;
-                ret = allocImageBufs(frame.mAlignment / getBPP(mParameters.getPictureFormat()),
-                                     frame.mHeight,
-                                     frame.mLength,
-                                     mParameters.getPictureFormat(),
-                                     bufferCount);
-                if ( NO_ERROR != ret ) {
-                    CAMHAL_LOGEB("allocImageBufs returned error 0x%x", ret);
+        if ( NO_ERROR == ret )
+            {
+            ret = allocImageBufs(frame.mAlignment,
+                                 frame.mHeight,
+                                 frame.mLength,
+                                 mParameters.getPictureFormat(),
+                                 bufferCount,
+                                 &max_queueable);
+            if ( NO_ERROR != ret )
+                {
+                CAMHAL_LOGEB("allocImageBufs returned error 0x%x", ret);
                 }
             }
-        }
 
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    CameraHal::PPM("Takepicture buffers allocated: ", &mStartCapture);
-    memcpy(&mImageBuffers->ppmStamp, &mStartCapture, sizeof(struct timeval));
-
-#endif
-
-    if (  (NO_ERROR == ret) && ( NULL != mCameraAdapter ) )
+        if (  (NO_ERROR == ret) && ( NULL != mCameraAdapter ) )
             {
             desc.mBuffers = mImageBuffers;
             desc.mOffsets = mImageOffsets;
@@ -3563,12 +3173,6 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
         }
     }
 
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-        CameraHal::PPM("Takepicture buffers registered: ", &mStartCapture);
-
-#endif
-
     if ((ret == NO_ERROR) && mBufferSourceAdapter_Out.get()) {
         mBufferSourceAdapter_Out->enableDisplay(0, 0, NULL);
     }
@@ -3579,8 +3183,6 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
 
          //pass capture timestamp along with the camera adapter command
         ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_START_IMAGE_CAPTURE,  (int) &mStartCapture);
-
-        CameraHal::PPM("Takepicture capture started: ", &mStartCapture);
 
 #else
 
@@ -3698,44 +3300,10 @@ status_t CameraHal::reprocess(const char *params)
     CameraAdapter::BuffersDescriptor desc;
     CameraBuffer *reprocBuffers = NULL;
     android::ShotParameters shotParams;
-    const char *valStr = NULL;
-    struct timeval startReprocess;
 
     android::AutoMutex lock(mLock);
 
     LOG_FUNCTION_NAME;
-
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    gettimeofday(&startReprocess, NULL);
-
-#endif
-
-    // 0. Get tap in surface
-    if (strlen(params) > 0) {
-        android::String8 shotParams8(params);
-        shotParams.unflatten(shotParams8);
-    }
-
-    valStr = shotParams.get(android::ShotParameters::KEY_CURRENT_TAP_IN);
-    if (valStr != NULL) {
-        int index = -1;
-        for (unsigned int i = 0; i < mInAdapters.size(); i++) {
-            if(mInAdapters.itemAt(i)->match(valStr)) {
-                index = i;
-                break;
-            }
-        }
-        if (index < 0) {
-            CAMHAL_LOGE("Invalid tap in surface passed to camerahal");
-            return BAD_VALUE;
-        }
-        CAMHAL_LOGD("Found matching in adapter at %d", index);
-        mBufferSourceAdapter_In = mInAdapters.itemAt(index);
-    } else {
-        CAMHAL_LOGE("No tap in surface sent with shot config!");
-        return BAD_VALUE;
-    }
 
     // 1. Get buffers
     if (mBufferSourceAdapter_In.get()) {
@@ -3747,23 +3315,10 @@ status_t CameraHal::reprocess(const char *params)
         goto exit;
     }
 
-
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    CameraHal::PPM("Got reprocess buffers: ", &startReprocess);
-
-#endif
-
     // 2. Get buffer information and parse parameters
     {
         shotParams.setBurst(bufferCount);
     }
-
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    memcpy(&reprocBuffers->ppmStamp, &startReprocess, sizeof(struct timeval));
-
-#endif
 
     // 3. Give buffer to camera adapter
     desc.mBuffers = reprocBuffers;
@@ -3772,18 +3327,11 @@ status_t CameraHal::reprocess(const char *params)
     desc.mLength = 0;
     desc.mCount = (size_t) bufferCount;
     desc.mMaxQueueable = (size_t) bufferCount;
-
     ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_USE_BUFFERS_REPROCESS, (int) &desc);
     if (ret != NO_ERROR) {
         CAMHAL_LOGE("Error calling camera use buffers");
         goto exit;
     }
-
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    CameraHal::PPM("Reprocess buffers registered: ", &startReprocess);
-
-#endif
 
     // 4. Start reprocessing
     ret = mBufferSourceAdapter_In->enableDisplay(0, 0, NULL);
@@ -3792,16 +3340,10 @@ status_t CameraHal::reprocess(const char *params)
         goto exit;
     }
 
-    // 4.5. cancel AF state if needed (before any operation and mutex lock)
-    if ((mCameraAdapter->getState() == CameraAdapter::AF_STATE) ||
-        (mCameraAdapter->getState() == CameraAdapter::VIDEO_AF_STATE)) {
-        cancelAutoFocus();
-    }
-
     // 5. Start capturing
-    ret = __takePicture(shotParams.flatten().string(), &startReprocess);
+    ret = __takePicture(shotParams.flatten().string());
 
-exit:
+ exit:
     return ret;
 }
 
@@ -3846,44 +3388,61 @@ status_t CameraHal::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2)
         }
 
     ///////////////////////////////////////////////////////
-    // Following commands NEED preview to be started
+    // Following commands do NOT need preview to be started
     ///////////////////////////////////////////////////////
 
-    if ((!previewEnabled()) && ((cmd == CAMERA_CMD_START_SMOOTH_ZOOM)
-            || (cmd == CAMERA_CMD_STOP_SMOOTH_ZOOM)
-            || (cmd == CAMERA_CMD_START_FACE_DETECTION)
-#ifdef OMAP_ENHANCEMENT_VTC
-            || (cmd == CAMERA_CMD_PREVIEW_DEINITIALIZATION)
-#endif
-            ))
+    switch ( cmd ) {
+#ifdef ANDROID_API_JB_OR_LATER
+    case CAMERA_CMD_ENABLE_FOCUS_MOVE_MSG:
     {
-        CAMHAL_LOGEA("sendCommand with cmd = 0x%x need preview to be started", cmd);
-        return BAD_VALUE;
+        const bool enable = static_cast<bool>(arg1);
+        android::AutoMutex lock(mLock);
+        if ( enable ) {
+            mMsgEnabled |= CAMERA_MSG_FOCUS_MOVE;
+        } else {
+            mMsgEnabled &= ~CAMERA_MSG_FOCUS_MOVE;
+        }
     }
+        return OK;
+#endif
+    }
+
+    if ( ret == OK && !previewEnabled()
+#ifdef OMAP_ENHANCEMENT_VTC
+            && (cmd != CAMERA_CMD_PREVIEW_INITIALIZATION)
+#endif
+         ) {
+        CAMHAL_LOGEA("Preview is not running");
+        ret = -EINVAL;
+    }
+
+    ///////////////////////////////////////////////////////
+    // Following commands NEED preview to be started
+    ///////////////////////////////////////////////////////
 
     if ( NO_ERROR == ret )
         {
         switch(cmd)
             {
             case CAMERA_CMD_START_SMOOTH_ZOOM:
+
                 ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_START_SMOOTH_ZOOM, arg1);
 
                 break;
-
             case CAMERA_CMD_STOP_SMOOTH_ZOOM:
-                ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_STOP_SMOOTH_ZOOM);
 
+                ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_STOP_SMOOTH_ZOOM);
                 break;
 
             case CAMERA_CMD_START_FACE_DETECTION:
+
                 ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_START_FD);
 
                 break;
 
             case CAMERA_CMD_STOP_FACE_DETECTION:
-                if (previewEnabled()) {
-                    ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_STOP_FD);
-                }
+
+                ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_STOP_FD);
 
                 break;
 
@@ -3910,20 +3469,6 @@ status_t CameraHal::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2)
                 ret = cameraPreviewInitialization();
 
                 break;
-#endif
-
-#ifdef ANDROID_API_JB_OR_LATER
-            case CAMERA_CMD_ENABLE_FOCUS_MOVE_MSG:
-            {
-                const bool enable = static_cast<bool>(arg1);
-                android::AutoMutex lock(mLock);
-                if ( enable ) {
-                    mMsgEnabled |= CAMERA_MSG_FOCUS_MOVE;
-                } else {
-                    mMsgEnabled &= ~CAMERA_MSG_FOCUS_MOVE;
-                }
-                break;
-            }
 #endif
 
             default:
@@ -3986,7 +3531,6 @@ status_t  CameraHal::dump(int fd) const
 
  */
 CameraHal::CameraHal(int cameraId)
-    : mSocFamily(getSocFamily())
 {
     LOG_FUNCTION_NAME;
 
@@ -4020,7 +3564,6 @@ CameraHal::CameraHal(int cameraId)
     mImageOffsets = NULL;
     mImageLength = 0;
     mImageFd = 0;
-    mImageCount = 0;
     mVideoOffsets = NULL;
     mVideoFd = 0;
     mVideoLength = 0;
@@ -4062,8 +3605,6 @@ CameraHal::CameraHal(int cameraId)
 #endif
 
     mCameraIndex = cameraId;
-
-    mExternalLocking = false;
 
     LOG_FUNCTION_NAME_EXIT;
 }
@@ -4158,7 +3699,7 @@ status_t CameraHal::initialize(CameraProperties::Properties* properties)
 
     if (strcmp(sensor_name, V4L_CAMERA_NAME_USB) == 0) {
 #ifdef V4L_CAMERA_ADAPTER
-        mCameraAdapter = V4LCameraAdapter_Factory(sensor_index, this);
+        mCameraAdapter = V4LCameraAdapter_Factory(sensor_index);
 #endif
     }
     else {
@@ -4582,7 +4123,6 @@ void CameraHal::initDefaultParameters()
     //Insert default values
     p.setPreviewFrameRate(atoi(mCameraProperties->get(CameraProperties::PREVIEW_FRAME_RATE)));
     p.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, mCameraProperties->get(CameraProperties::FRAMERATE_RANGE));
-    p.set(TICameraParameters::KEY_PREVIEW_FRAME_RATE_RANGE, mCameraProperties->get(CameraProperties::FRAMERATE_RANGE));
     p.setPreviewFormat(mCameraProperties->get(CameraProperties::PREVIEW_FORMAT));
     p.setPictureFormat(mCameraProperties->get(CameraProperties::PICTURE_FORMAT));
     p.set(android::CameraParameters::KEY_JPEG_QUALITY, mCameraProperties->get(CameraProperties::JPEG_QUALITY));
@@ -4642,7 +4182,7 @@ void CameraHal::initDefaultParameters()
 #ifndef OMAP_TUNA
     // TI extensions for enable/disable algos
     // Hadcoded for now
-    p.set(TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA, android::CameraParameters::FALSE);
+    p.set(TICameraParameters::KEY_ALGO_FIXED_GAMMA, android::CameraParameters::TRUE);
     p.set(TICameraParameters::KEY_ALGO_NSF1, android::CameraParameters::TRUE);
     p.set(TICameraParameters::KEY_ALGO_NSF2, android::CameraParameters::TRUE);
     p.set(TICameraParameters::KEY_ALGO_SHARPENING, android::CameraParameters::TRUE);
@@ -4730,11 +4270,6 @@ void CameraHal::deinitialize()
         mSensorListener = NULL;
     }
 
-    mBufferSourceAdapter_Out.clear();
-    mBufferSourceAdapter_In.clear();
-    mOutAdapters.clear();
-    mInAdapters.clear();
-
     LOG_FUNCTION_NAME_EXIT;
 
 }
@@ -4748,9 +4283,22 @@ status_t CameraHal::storeMetaDataInBuffers(bool enable)
     LOG_FUNCTION_NAME_EXIT;
 }
 
-void CameraHal::setExternalLocking(bool extBuffLocking)
+void CameraHal::getPreferredPreviewRes(int *width, int *height)
 {
-    mExternalLocking = extBuffLocking;
+    LOG_FUNCTION_NAME;
+
+    // We request Ducati for a higher resolution so preview looks better and then downscale the frame before the callback.
+    // TODO: This should be moved to configuration constants and boolean flag whether to provide such optimization
+    // Also consider providing this configurability of the desired display resolution from the application
+    if ( ( *width == 320 ) && ( *height == 240 ) ) {
+        *width = 640;
+        *height = 480;
+    } else if ( ( *width == 176 ) && ( *height == 144 ) ) {
+        *width = 704;
+        *height = 576;
+    }
+
+    LOG_FUNCTION_NAME_EXIT;
 }
 
 void CameraHal::resetPreviewRes(android::CameraParameters *params)

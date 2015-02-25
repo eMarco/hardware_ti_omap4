@@ -213,11 +213,10 @@ public:
         {
         INITIAL_MODE = -1,
         HIGH_SPEED = 1,
-        HIGH_QUALITY,
-        VIDEO_MODE,
-        HIGH_QUALITY_ZSL,
-        CP_CAM,
-        VIDEO_MODE_HQ,
+        HIGH_QUALITY = 2,
+        VIDEO_MODE = 3,
+        HIGH_QUALITY_ZSL = 4,
+        CP_CAM = 5,
         };
 
     enum IPPMode
@@ -259,13 +258,12 @@ public:
     enum CaptureSettingsFlags {
         SetFormat               = 1 << 0,
         SetThumb                = 1 << 1,
-        SetBurstExpBracket      = 1 << 2,
+        SetExpBracket           = 1 << 2,
         SetQuality              = 1 << 3,
         SetRotation             = 1 << 4,
+        SetBurst                = 1 << 5,
         ECaptureSettingMax,
-        ECapturesettingsAll = ( ((ECaptureSettingMax -1 ) << 1) -1 ), /// all possible flags raised
-        ECaptureParamSettings = SetFormat | SetThumb | SetQuality | SetBurstExpBracket, // Settings set with SetParam
-        ECaptureConfigSettings = (ECapturesettingsAll & ~ECaptureParamSettings)
+        ECapturesettingsAll = ( ((ECaptureSettingMax -1 ) << 1) -1 ) /// all possible flags raised
     };
 
     enum PreviewSettingsFlags {
@@ -352,7 +350,6 @@ public:
             OMX_U32                         mMaxFrameRate;
             CameraFrame::FrameType          mImageType;
             OMX_TI_STEREOFRAMELAYOUTTYPE    mFrameLayoutType;
-            CameraBufferType                mBufferType;
 
             CameraBuffer * lookup_omx_buffer (OMX_BUFFERHEADERTYPE *pBufHeader);
             enum {
@@ -580,16 +577,12 @@ private:
     status_t setParameter3ABoolInvert(const OMX_INDEXTYPE omx_idx,
                                       const OMX_BOOL data, const char *msg);
 #ifndef OMAP_TUNA
-    status_t setAlgoExternalGamma(Gen3A_settings& Gen3A);
+    status_t setAlgoFixedGamma(Gen3A_settings& Gen3A);
     status_t setAlgoNSF1(Gen3A_settings& Gen3A);
     status_t setAlgoNSF2(Gen3A_settings& Gen3A);
     status_t setAlgoSharpening(Gen3A_settings& Gen3A);
     status_t setAlgoThreeLinColorMap(Gen3A_settings& Gen3A);
     status_t setAlgoGIC(Gen3A_settings& Gen3A);
-
-    //Gamma table
-    void updateGammaTable(const char* gamma);
-    status_t setGammaTable(Gen3A_settings& Gen3A);
 #endif
 
     status_t getEVCompensation(Gen3A_settings& Gen3A);
@@ -938,9 +931,6 @@ private:
     static const int SENSORID_OV14825;
     static const int SENSORID_S5K4E1GA;
     static const int SENSORID_S5K6A1GX03;
-    static const int SENSORID_OV8830;
-    static const int SENSORID_OV2722;
-    static const int SENSORID_OV9726;
     static const CapU32 mFacing [];
     static const userToOMX_LUT mAutoConvergence [];
     static const LUTtype mAutoConvergenceLUT;
@@ -1140,7 +1130,6 @@ private:
     bool mCaptureConfigured;
     unsigned int mPendingCaptureSettings;
     unsigned int mPendingPreviewSettings;
-    unsigned int mPendingReprocessSettings;
     OMX_TI_ANCILLARYDATATYPE* mCaptureAncillaryData;
     OMX_TI_WHITEBALANCERESULTTYPE* mWhiteBalanceData;
     bool mReprocConfigured;
@@ -1248,8 +1237,6 @@ private:
     bool mTunnelDestroyed;
     bool mPreviewPortInitialized;
 
-    // Used for allocations that need to be sent to Ducati
-    MemoryManager mMemMgr;
 };
 
 } // namespace Camera
