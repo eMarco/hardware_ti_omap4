@@ -4043,7 +4043,7 @@ status_t OMXCameraAdapter::setExtraData(bool enable, OMX_U32 nPortIndex, OMX_EXT
     extraDataControl.nPortIndex = nPortIndex;
     extraDataControl.eExtraDataType = eType;
 #ifdef OMAP_TUNA
-    extraDataControl.eCameraView = OMX_2D;
+//    extraDataControl.eCameraView = OMX_2D;
 #endif
 
     if (enable) {

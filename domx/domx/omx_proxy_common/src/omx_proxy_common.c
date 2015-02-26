@@ -1039,6 +1039,7 @@ static OMX_ERRORTYPE PROXY_UseBuffer(OMX_IN OMX_HANDLETYPE hComponent,
 			pAuxBuf1 = NULL;
 	}
 #ifndef OMAP_TUNA
+#warning "THIS AIN'T TUNA BITCH"
 	if(pCompPrv->proxyPortBuffers[nPortIndex].proxyBufferType == BufferDescriptorVirtual2D)
 	{
 		pAuxBuf0 = (OMX_U8 *)(((OMX_TI_BUFFERDESCRIPTOR_TYPE*)pBuffer)->pBuf[0]);
