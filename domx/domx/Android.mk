@@ -16,13 +16,13 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/../omx_core/inc \
 	$(LOCAL_PATH)/../mm_osal/inc \
 	$(LOCAL_PATH)/profiling/inc \
-	$(DEVICE_FOLDER)/hwc/ \
-	$(DEVICE_FOLDER)/libion_ti/ \
+    $(HARDWARE_TI_OMAP4_BASE)/hwc/ \
+    $(HARDWARE_TI_OMAP4_BASE)/include/ \
 	system/core/include/cutils \
-	hardware/libhardware/include \
+    $(HARDWARE_TI_OMAP4_BASE)/../../libhardware/include \
     frameworks/native/include/media/openmax
 
-LOCAL_CFLAGS += -D_Android -DENABLE_GRALLOC_BUFFERS -DUSE_ENHANCED_PORTRECONFIG -DANDROID_QUIRK_LOCK_BUFFER -DUSE_ION
+LOCAL_CFLAGS += -D_Android -DENABLE_GRALLOC_BUFFERS -DUSE_ENHANCED_PORTRECONFIG -DANDROID_QUIRK_LOCK_BUFFER -DUSE_ION -fno-strict-aliasing
 
 
 LOCAL_SHARED_LIBRARIES := \
