@@ -560,7 +560,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_SetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 		tParamSetNPA.nVersion.s.nRevision = 0x0;
 		tParamSetNPA.nVersion.s.nStep = 0x0;
 		tParamSetNPA.nPortIndex = OMX_MPEG4E_INPUT_PORT;
-		tParamSetNPA.bEnabled = OMX_TRUE;
+		tParamSetNPA.bEnabled = OMX_FALSE;
 		//Call NPA on OMX encoder on ducati.
 		PROXY_SetParameter(hComponent,OMX_TI_IndexParamBufferPreAnnouncement, &tParamSetNPA);
 		pCompPrv->proxyPortBuffers[pStoreMetaData->nPortIndex].proxyBufferType = EncoderMetadataPointers;
@@ -817,14 +817,20 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	}
 #endif
 
-	if( pCompPrv->proxyPortBuffers[pBufferHdr->nInputPortIndex].proxyBufferType == EncoderMetadataPointers) {
+EXIT:
+		if( pBufferHdr!=NULL && pCompPrv!=NULL)
+	    {
+		    if(pCompPrv->proxyPortBuffers[pBufferHdr->nInputPortIndex].proxyBufferType == EncoderMetadataPointers)
+		    {
 		pBufferHdr->pBuffer = pBufferOrig;
+		       pBufferHdr->nFilledLen = nFilledLen;
+		       pBufferHdr->nAllocLen = nAllocLen;
 #ifdef ENABLE_GRALLOC_BUFFER
 		RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf0);
 		RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf1);
 #endif
 	}
-	EXIT:
+	    }
 		return eError;
 }
 

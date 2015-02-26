@@ -9,7 +9,10 @@ LOCAL_SRC_FILES:= \
 	omx_rpc/src/omx_rpc_config.c \
 	omx_rpc/src/omx_rpc_platform.c \
 	omx_proxy_common/src/omx_proxy_common.c \
-	profiling/src/profile.c
+    profiling/src/profile.c \
+    plugins/memplugin.c \
+    plugins/memplugin_table.c \
+    plugins/memplugin_ion.c
 
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/omx_rpc/inc \
@@ -20,10 +23,14 @@ LOCAL_C_INCLUDES += \
     $(HARDWARE_TI_OMAP4_BASE)/include/ \
 	system/core/include/cutils \
     $(HARDWARE_TI_OMAP4_BASE)/../../libhardware/include \
+    $(LOCAL_PATH)/plugins/inc/ \
     frameworks/native/include/media/openmax
 
 LOCAL_CFLAGS += -D_Android -DENABLE_GRALLOC_BUFFERS -DUSE_ENHANCED_PORTRECONFIG -DANDROID_QUIRK_LOCK_BUFFER -DUSE_ION -fno-strict-aliasing
 
+ifdef BOARD_USE_TI_DOMX_LOW_SECURE_HEAP
+LOCAL_CFLAGS += -DDOMX_LOW_SECURE_HEAP
+endif
 
 LOCAL_SHARED_LIBRARIES := \
 	libmm_osal \

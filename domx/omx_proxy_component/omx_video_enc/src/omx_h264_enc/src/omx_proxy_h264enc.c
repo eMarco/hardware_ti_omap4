@@ -692,7 +692,7 @@ OMX_ERRORTYPE LOCAL_PROXY_H264E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	OMX_PTR pBufferOrig = NULL;
 	OMX_U32 nStride = 0, nNumLines = 0;
 	OMX_PARAM_PORTDEFINITIONTYPE tParamStruct;
-	OMX_U32 nFilledLen, nAllocLen;
+	OMX_U32 nFilledLen = 0, nAllocLen = 0;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
 	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 	TIMM_OSAL_ERRORTYPE eOSALStatus = TIMM_OSAL_ERR_NONE;
@@ -869,7 +869,9 @@ OMX_ERRORTYPE LOCAL_PROXY_H264E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 #endif
 
 EXIT:
-	if( pBufferHdr!=NULL && pCompPrv->proxyPortBuffers[pBufferHdr->nInputPortIndex].proxyBufferType == EncoderMetadataPointers)
+	if( pBufferHdr!=NULL && pCompPrv!=NULL)
+	{
+		if(pCompPrv->proxyPortBuffers[pBufferHdr->nInputPortIndex].proxyBufferType == EncoderMetadataPointers)
 	{
 		pBufferHdr->pBuffer = pBufferOrig;
 		pBufferHdr->nFilledLen = nFilledLen;
@@ -878,6 +880,7 @@ EXIT:
 		RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf0);
 		RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf1);
 #endif
+	        }
 	}
 	return eError;
 }

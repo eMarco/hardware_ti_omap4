@@ -131,6 +131,7 @@ extern void DumpVideoFrame(DebugFrame_Dump *frameInfo);
 #endif
 
 OMX_ERRORTYPE OMX_ProxyViddecInit(OMX_HANDLETYPE hComponent);
+OMX_ERRORTYPE PROXY_VIDDEC_ComponentDeInit(OMX_HANDLETYPE hComponent);
 
 OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
 {
@@ -230,6 +231,7 @@ OMX_ERRORTYPE OMX_ProxyViddecInit(OMX_HANDLETYPE hComponent)
         pHandle->GetParameter = PROXY_VIDDEC_GetParameter;
 #endif
 	pHandle->GetExtensionIndex = PROXY_VIDDEC_GetExtensionIndex;
+        pHandle->ComponentDeInit = PROXY_VIDDEC_ComponentDeInit;
 
 #ifdef  SET_STRIDE_PADDING_FROM_PROXY
         pHandle->SendCommand = PROXY_VIDDEC_SendCommand;
@@ -641,7 +643,6 @@ OMX_ERRORTYPE RPC_UTIL_SetStrideAndPadding(OMX_COMPONENTTYPE * hComponent,PROXY_
 OMX_ERRORTYPE PROXY_VIDDEC_FillThisBuffer(OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE * pBufferHdr)
 {
 	OMX_ERRORTYPE eError = OMX_ErrorNone, eCompReturn = OMX_ErrorNone;
-	RPC_OMX_ERRORTYPE eRPCError = RPC_OMX_ErrorNone;
 	PROXY_COMPONENT_PRIVATE *pCompPrv;
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	OMX_U32 count = 0;
@@ -693,16 +694,17 @@ OMX_ERRORTYPE PROXY_VIDDEC_FillThisBuffer(OMX_HANDLETYPE hComponent, OMX_BUFFERH
 		pCompPrv->debugframeInfo.frame_height = rect.nHeight;
 		pCompPrv->debugframeInfo.frame_xoffset = rect.nLeft;
 		pCompPrv->debugframeInfo.frame_yoffset = rect.nTop;
+		pCompPrv->debugframeInfo.decoded_height = sPortDef.format.video.nFrameHeight;
 #endif
 		pCompPrv->grallocModule->lock((gralloc_module_t const *) pCompPrv->grallocModule,
 				(buffer_handle_t)grallocHandle, GRALLOC_USAGE_HW_RENDER,
 				0,0,sPortDef.format.video.nFrameWidth, sPortDef.format.video.nFrameHeight,NULL);
 	}
 
-        eRPCError = PROXY_FillThisBuffer(hComponent, pBufferHdr);
+	eError = PROXY_FillThisBuffer(hComponent, pBufferHdr);
 
 	PROXY_assert(eError == OMX_ErrorNone,
-	    eError," Error in Proxy SetParameter for Port Def");
+			eError," Error in Proxy FillThisBuffer");
 
       EXIT:
 	DOMX_EXIT("eError: %d", eError);
@@ -721,7 +723,6 @@ OMX_ERRORTYPE PROXY_VIDDEC_FillBufferDone(OMX_HANDLETYPE hComponent,
     OMX_PTR pMarkData)
 {
 	OMX_ERRORTYPE eError = OMX_ErrorNone, eCompReturn = OMX_ErrorNone;
-	RPC_OMX_ERRORTYPE eRPCError = RPC_OMX_ErrorNone;
 	PROXY_COMPONENT_PRIVATE *pCompPrv = NULL;
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	OMX_U32 count = 0;
@@ -782,11 +783,11 @@ OMX_ERRORTYPE PROXY_VIDDEC_FillBufferDone(OMX_HANDLETYPE hComponent,
 #endif
 	}
 
-	eRPCError = PROXY_FillBufferDone(hComponent,remoteBufHdr, nfilledLen, nOffset, nFlags,
+	eError = PROXY_FillBufferDone(hComponent,remoteBufHdr, nfilledLen, nOffset, nFlags,
 		nTimeStamp, hMarkTargetComponent, pMarkData);
 
 	PROXY_assert(eError == OMX_ErrorNone,
-			eError," Error in PROXY FillBufferDone for Port Def");
+			eError," Error in PROXY FillBufferDone");
 
 EXIT:
 	DOMX_EXIT("eError: %d", eError);
@@ -795,3 +796,20 @@ EXIT:
 
 #endif
 
+OMX_ERRORTYPE PROXY_VIDDEC_ComponentDeInit(OMX_HANDLETYPE hComponent)
+{
+        OMX_ERRORTYPE eError = OMX_ErrorNone;
+	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
+
+        DOMX_ENTER("PROXY_VIDDEC_ComponentDeinit called with hComp %x",hComponent);
+	PROXY_require((hComp->pComponentPrivate != NULL),
+			OMX_ErrorBadParameter,
+			"This is fatal error, processing cant proceed - please debug");
+
+        //decoder specific config will be included here in following patches
+
+        eError = PROXY_ComponentDeInit(hComponent);
+EXIT:
+	DOMX_EXIT("eError: %d", eError);
+	return eError;
+}

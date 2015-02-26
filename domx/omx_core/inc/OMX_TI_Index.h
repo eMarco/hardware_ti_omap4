@@ -43,6 +43,7 @@
  *! Revision History
  *! ============================
  *! 20-Dec-2008 x0052661@ti.com, initial version
+ * ! 20-jun-2012 x0078587@ti.com
  *================================================================*/
 
 #ifndef _OMX_TI_INDEX_H_
@@ -119,8 +120,9 @@ typedef enum OMX_TI_INDEXTYPE {
     OMX_IndexConfigExtCapturing,                        /**< 0x7F000024 reference: OMX_CONFIG_EXTCAPTURING */
 
     OMX_IndexCameraOperatingMode,                       /**< 0x7F000025 reference: OMX_CONFIG_CAMOPERATINGMODETYPE */
-
-
+#ifndef OMAP_TUNA
+    OMX_IndexParamCameraOperatingMode = OMX_IndexCameraOperatingMode, /**< 0x7F000025 reference: OMX_CONFIG_CAMOPERATINGMODETYPE */
+#endif
     OMX_IndexConfigDigitalFlash,                        /**< 0x7F000026 reference: OMX_CONFIG_BOOLEANTYPE */
     OMX_IndexConfigPrivacyIndicator,                    /**< 0x7F000027 reference: OMX_CONFIG_BOOLEANTYPE */
     OMX_IndexConfigTorchMode,                           /**< 0x7F000028 reference: OMX_CONFIG_TORCHMODETYPE */
@@ -211,6 +213,7 @@ typedef enum OMX_TI_INDEXTYPE {
     OMX_TI_IndexConfigZslFrameSelectMethod,              /**< reference: OMX_TI_CONFIG_ZSLFRAMESELECTMETHODTYPE */
     OMX_TI_IndexAndroidNativeBufferUsage,          /**< reference: OMX_TI_IndexAndroidNativeBufferUsage */
     OMX_TI_IndexConfigAlgoAreas,                         /**< reference: OMX_PARAM_SHAREDBUFFER (pSharedBuff is OMX_ALGOAREASTYPE) */
+    OMX_TI_IndexParamVtcSlice,
     OMX_TI_IndexConfigAutofocusEnable,             /**< reference: OMX_CONFIG_BOOLEANTYPE */
     OMX_TI_IndexComponentHandle,                        /**< 0x7F0000** reference: OMX_TI_COMPONENT_HANDLE */
     OMX_TI_IndexParamComponentExpectedSuspensionState,  /**< 0x7F0000** reference: OMX_PARAM_SUSPENSIONTYPE */

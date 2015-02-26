@@ -20,6 +20,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/../domx/omx_rpc/inc \
 	$(HARDWARE_TI_OMAP4_BASE)/../../libhardware/include \
 	$(HARDWARE_TI_OMAP4_BASE)/hwc/ \
+	$(LOCAL_PATH)/../domx/plugins/inc/ \
 	frameworks/native/include/media/openmax
 
 LOCAL_SHARED_LIBRARIES := \
@@ -58,6 +59,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/../mm_osal/inc \
 	$(LOCAL_PATH)/../domx \
 	$(LOCAL_PATH)/../domx/omx_rpc/inc \
+	$(LOCAL_PATH)/../domx/plugins/inc/ \
 	frameworks/native/include/media/openmax
 
 LOCAL_SHARED_LIBRARIES := \
@@ -89,6 +91,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/../domx \
 	$(HARDWARE_TI_OMAP4_BASE)/include/ \
 	$(LOCAL_PATH)/../domx/omx_rpc/inc \
+	$(LOCAL_PATH)/../domx/plugins/inc/ \
 	$(LOCAL_PATH)/omx_camera/inc/ \
 	frameworks/native/include/media/openmax
 
@@ -104,6 +107,10 @@ LOCAL_CFLAGS += -DTMS32060 -D_DB_TIOMAP -DSYSLINK_USE_SYSMGR -DSYSLINK_USE_LOADE
 LOCAL_CFLAGS += -D_Android -DSET_STRIDE_PADDING_FROM_PROXY -DANDROID_QUIRK_CHANGE_PORT_VALUES -DUSE_ENHANCED_PORTRECONFIG
 LOCAL_CFLAGS += -DANDROID_QUIRK_LOCK_BUFFER -DUSE_ION
 LOCAL_MODULE_TAGS:= optional
+
+ifdef TI_CAMERAHAL_USES_LEGACY_DOMX_DCC
+LOCAL_CFLAGS += -DUSES_LEGACY_DOMX_DCC
+endif
 
 LOCAL_SRC_FILES:= omx_camera/src/omx_proxy_camera.c
 LOCAL_MODULE:= libOMX.TI.DUCATI1.VIDEO.CAMERA
@@ -162,6 +169,7 @@ LOCAL_C_INCLUDES += \
 	$(HARDWARE_TI_OMAP4_BASE)/hwc \
 	$(HARDWARE_TI_OMAP4_BASE)/camera/inc \
 	$(FRAMEWORKS_MEDIA_BASE) \
+	$(LOCAL_PATH)/../domx/plugins/inc/ \
 	$(LOCAL_PATH)/omx_video_enc/inc \
 	frameworks/native/include/media/openmax
 
@@ -197,6 +205,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/../domx/omx_rpc/inc \
 	$(HARDWARE_TI_OMAP4_BASE)/../../libhardware/include \
 	$(HARDWARE_TI_OMAP4_BASE)/hwc/ \
+	$(LOCAL_PATH)/../domx/plugins/inc/ \
 	frameworks/native/include/media/openmax
 
 LOCAL_SHARED_LIBRARIES := \
