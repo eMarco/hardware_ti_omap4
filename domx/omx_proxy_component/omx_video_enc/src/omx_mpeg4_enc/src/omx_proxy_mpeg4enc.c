@@ -67,6 +67,7 @@
 #include "OMX_TI_IVCommon.h"
 #include "OMX_TI_Video.h"
 #include "OMX_TI_Index.h"
+#include "omx_proxy_video_encoder.h"
 
 #include <MetadataBufferType.h>
 #ifdef  ENABLE_GRALLOC_BUFFER
@@ -142,16 +143,6 @@ static OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_FreeBuffer(OMX_IN OMX_HANDLETYPE hCompon
     OMX_IN OMX_U32 nPortIndex, OMX_IN OMX_BUFFERHEADERTYPE * pBufferHdr);
 
 static OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_ComponentDeInit(OMX_HANDLETYPE hComponent);
-
-typedef struct _OMX_PROXY_MPEG4E_PRIVATE
-{
-	OMX_PTR  hBufPipe;
-	OMX_BOOL bAndroidOpaqueFormat;
-	OMX_PTR  hCC;
-	IMG_native_handle_t* gralloc_handle[OMX_MPEG4E_NUM_INTERNAL_BUF];
-	OMX_S32  nCurBufIndex;
-	alloc_device_t* mAllocDev;
-}OMX_PROXY_MPEG4E_PRIVATE;
 
 RPC_OMX_ERRORTYPE RPC_RegisterBuffer(OMX_HANDLETYPE hRPCCtx, int fd,
 				     OMX_PTR *handle1, OMX_PTR *handle2,
@@ -277,7 +268,7 @@ OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
         OMX_TI_PARAM_ENHANCEDPORTRECONFIG tParamStruct;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
 	TIMM_OSAL_ERRORTYPE eOSALStatus = TIMM_OSAL_ERR_NONE;
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 #endif
 	char value[OMX_MAX_STRINGNAME_SIZE];
 	OMX_U32 mEnableVFR = 1; /* Flag used to enable/disable VFR for Encoder */
@@ -313,8 +304,8 @@ OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
 
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
 	pComponentPrivate->pCompProxyPrv =
-	    (OMX_PROXY_MPEG4E_PRIVATE *)
-	    TIMM_OSAL_Malloc(sizeof(OMX_PROXY_MPEG4E_PRIVATE), TIMM_OSAL_TRUE,
+	    (OMX_PROXY_ENCODER_PRIVATE *)
+	    TIMM_OSAL_Malloc(sizeof(OMX_PROXY_ENCODER_PRIVATE), TIMM_OSAL_TRUE,
 	    0, TIMMOSAL_MEM_SEGMENT_INT);
 
 	PROXY_assert(pComponentPrivate->pCompProxyPrv != NULL,
@@ -322,9 +313,9 @@ OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
 	    " Could not allocate proxy component private");
 
 	TIMM_OSAL_Memset(pComponentPrivate->pCompProxyPrv, 0,
-		sizeof(OMX_PROXY_MPEG4E_PRIVATE));
+		sizeof(OMX_PROXY_ENCODER_PRIVATE));
 
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pComponentPrivate->pCompProxyPrv;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pComponentPrivate->pCompProxyPrv;
 
 	/* Create Pipe of for encoder input buffers */
 	eOSALStatus = TIMM_OSAL_CreatePipe(&pProxy->hBufPipe, sizeof(OMX_U32),
@@ -412,7 +403,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_GetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 	OMX_PARAM_PORTDEFINITIONTYPE* pPortDef = NULL;
 	OMX_VIDEO_PARAM_PORTFORMATTYPE* pPortParam = NULL;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 #endif
 
 	PROXY_require((pParamStruct != NULL), OMX_ErrorBadParameter, NULL);
@@ -421,7 +412,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_GetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 
 	pCompPrv = (PROXY_COMPONENT_PRIVATE *) hComp->pComponentPrivate;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pCompPrv->pCompProxyPrv;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pCompPrv->pCompProxyPrv;
 #endif
 
 	DOMX_ENTER
@@ -504,7 +495,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_SetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 	OMX_TI_PARAM_BUFFERPREANNOUNCE tParamSetNPA;
 	OMX_PARAM_PORTDEFINITIONTYPE sPortDef;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 #endif
 
 	DOMX_ENTER
@@ -517,7 +508,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_SetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 
 	pCompPrv = (PROXY_COMPONENT_PRIVATE *) hComp->pComponentPrivate;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pCompPrv->pCompProxyPrv;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pCompPrv->pCompProxyPrv;
 #endif
 
 	if(nParamIndex == OMX_IndexParamPortDefinition)
@@ -677,7 +668,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	OMX_PARAM_PORTDEFINITIONTYPE tParamStruct;
 	OMX_U32 nFilledLen, nAllocLen;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 	TIMM_OSAL_ERRORTYPE eOSALStatus = TIMM_OSAL_ERR_NONE;
 	OMX_U32 nBufIndex = 0, nSize=0, nRet=0;
 #endif
@@ -694,7 +685,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 
 	pCompPrv = (PROXY_COMPONENT_PRIVATE *) hComp->pComponentPrivate;
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pCompPrv->pCompProxyPrv;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pCompPrv->pCompProxyPrv;
 #endif
 
 	tParamStruct.nSize = sizeof(OMX_PARAM_PORTDEFINITIONTYPE);
@@ -846,7 +837,7 @@ static OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_AllocateBuffer(OMX_HANDLETYPE hComponent
 	PROXY_COMPONENT_PRIVATE *pCompPrv = NULL;
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	OMX_CONFIG_RECTTYPE tParamRect;
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 	TIMM_OSAL_ERRORTYPE eOSALStatus = TIMM_OSAL_ERR_NONE;
         DOMX_DEBUG(" ++LOCAL_PROXY_MPEG4E_AllocateBuffer");
 	int err, nStride;
@@ -854,7 +845,7 @@ static OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_AllocateBuffer(OMX_HANDLETYPE hComponent
 	PROXY_require(hComp->pComponentPrivate != NULL, OMX_ErrorBadParameter,
 	    NULL);
 	pCompPrv = (PROXY_COMPONENT_PRIVATE *) hComp->pComponentPrivate;
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pCompPrv->pCompProxyPrv;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pCompPrv->pCompProxyPrv;
 
 	if((nPortIndex == OMX_MPEG4E_INPUT_PORT) &&
 	   (pProxy->bAndroidOpaqueFormat))
@@ -903,12 +894,12 @@ static OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_FreeBuffer(OMX_IN OMX_HANDLETYPE hCompon
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	PROXY_COMPONENT_PRIVATE *pCompPrv = NULL;
 	OMX_U32 nBufIndex, nSize, nCount=0;
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 
 	PROXY_require(hComp->pComponentPrivate != NULL, OMX_ErrorBadParameter,
 	    NULL);
 	pCompPrv = (PROXY_COMPONENT_PRIVATE *) hComp->pComponentPrivate;
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pCompPrv->pCompProxyPrv;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pCompPrv->pCompProxyPrv;
 
 	if((nPortIndex == OMX_MPEG4E_INPUT_PORT) &&
 	   (pProxy->bAndroidOpaqueFormat))
@@ -943,14 +934,14 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_ComponentDeInit(OMX_HANDLETYPE hComponent)
 	OMX_ERRORTYPE eError = OMX_ErrorNone;
 	PROXY_COMPONENT_PRIVATE *pCompPrv;
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 	TIMM_OSAL_ERRORTYPE eOSALStatus = TIMM_OSAL_ERR_NONE;
 	OMX_U32 i;
 
 	PROXY_require(hComp->pComponentPrivate != NULL, OMX_ErrorBadParameter,
 	    NULL);
 	pCompPrv = (PROXY_COMPONENT_PRIVATE *) hComp->pComponentPrivate;
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pCompPrv->pCompProxyPrv;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pCompPrv->pCompProxyPrv;
 
 	if(pProxy->hBufPipe != NULL)
 	{
@@ -995,9 +986,9 @@ int COLORCONVERT_open(void **hCC, PROXY_COMPONENT_PRIVATE *pCompPrv)
 {
 	int nErr = -1;
 	hw_module_t const* module = NULL;
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
 
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pCompPrv->pCompProxyPrv;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pCompPrv->pCompProxyPrv;
 	nErr = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module);
 
 	if (nErr == 0)
@@ -1039,8 +1030,8 @@ int COLORCONVERT_PlatformOpaqueToNV12(void *hCC,
 
 int COLORCONVERT_close(void *hCC,PROXY_COMPONENT_PRIVATE *pCompPrv)
 {
-	OMX_PROXY_MPEG4E_PRIVATE *pProxy = NULL;
-	pProxy = (OMX_PROXY_MPEG4E_PRIVATE *) pCompPrv->pCompProxyPrv;
+	OMX_PROXY_ENCODER_PRIVATE *pProxy = NULL;
+	pProxy = (OMX_PROXY_ENCODER_PRIVATE *) pCompPrv->pCompProxyPrv;
 	if(pProxy && pProxy->mAllocDev)
 	{
 		gralloc_close(pProxy->mAllocDev);
