@@ -144,10 +144,11 @@ static OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_FreeBuffer(OMX_IN OMX_HANDLETYPE hCompon
 
 static OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_ComponentDeInit(OMX_HANDLETYPE hComponent);
 
-RPC_OMX_ERRORTYPE RPC_RegisterBuffer(OMX_HANDLETYPE hRPCCtx, int fd,
+extern RPC_OMX_ERRORTYPE RPC_RegisterBuffer(OMX_HANDLETYPE hRPCCtx, int fd1, int fd2,
 				     OMX_PTR *handle1, OMX_PTR *handle2,
 				     PROXY_BUFFER_TYPE proxyBufferType);
-RPC_OMX_ERRORTYPE RPC_UnRegisterBuffer(OMX_HANDLETYPE hRPCCtx, OMX_PTR handle);
+extern RPC_OMX_ERRORTYPE RPC_UnRegisterBuffer(OMX_HANDLETYPE hRPCCtx, OMX_PTR handle1,
+										OMX_PTR handle2, PROXY_BUFFER_TYPE proxyBufferType);
 #endif
 
 OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_GetExtensionIndex(OMX_IN OMX_HANDLETYPE hComponent,
@@ -251,11 +252,35 @@ static OMX_ERRORTYPE ComponentPrivateEmptyThisBuffer(OMX_HANDLETYPE hComponent,
 {
 	OMX_ERRORTYPE eError = OMX_ErrorNone;
 
+	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
+	PROXY_COMPONENT_PRIVATE *pCompPrv;
+	PROXY_assert(hComponent != NULL, OMX_ErrorInsufficientResources,"Null component handle received in EmptyThisBuffer");
+	pCompPrv = (PROXY_COMPONENT_PRIVATE *) hComp->pComponentPrivate;
+	PROXY_assert(pCompPrv != NULL, OMX_ErrorInsufficientResources,"Pointer to Null component private structure received in EmptyThisBuffer");
+        if(pCompPrv->proxyPortBuffers[0].proxyBufferType == EncoderMetadataPointers) {
+		OMX_U32 *pTempBuffer;
+		OMX_U32 nMetadataBufferType;
+		pTempBuffer = (OMX_U32 *) (pBufferHdr->pBuffer);
+		if(pTempBuffer == NULL) {
+	                eError = OMX_ErrorBadParameter;
+			        DOMX_ERROR("Null meta data buffer supplied - Cannot find metadata type");
+			        goto EXIT;
+	        }
+		nMetadataBufferType = *pTempBuffer;
+		if(nMetadataBufferType == kMetadataBufferTypeCameraSource) {
     eError = OMX_ConfigureDynamicFrameRate(hComponent, pBufferHdr);
     if( eError != OMX_ErrorNone)
-        DOMX_ERROR(" Error while configuring FrameRate Dynamically.Error  info = %d",eError);
+				DOMX_ERROR(" Error while configuring FrameRate Dynamically.Error  info = %d - Non Fatal Error",eError);
+		}
+	}
 
     DOMX_DEBUG("Redirection from ComponentPricateEmptyThisBuffer to PROXY_EmptyThisBuffer");
+EXIT:
+        if( eError != OMX_ErrorNone) {
+		DOMX_EXIT("%s: exiting with error 0x%x - Non Fatal",__FUNCTION__,eError);
+        } else {
+               DOMX_EXIT("%s: dynamic frame rate config successful",__FUNCTION__);
+        }
     return LOCAL_PROXY_MPEG4E_EmptyThisBuffer (hComponent,pBufferHdr);
 }
 
@@ -436,6 +461,13 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_GetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 #endif
 			{
 				pPortDef->format.video.eColorFormat = OMX_TI_COLOR_FormatYUV420PackedSemiPlanar;
+			}
+		}
+		if(pPortDef->nPortIndex == OMX_MPEG4E_INPUT_PORT)
+		{
+			if(pCompPrv->proxyPortBuffers[OMX_MPEG4E_INPUT_PORT].proxyBufferType == EncoderMetadataPointers)
+			{
+				pPortDef->nBufferSize = sizeof(video_metadata_t);
 			}
 		}
 	}
@@ -795,7 +827,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 			return OMX_ErrorBadParameter;
 		}
 #ifdef ENABLE_GRALLOC_BUFFER
-		eRPCError = RPC_RegisterBuffer(pCompPrv->hRemoteComp, pBufferHdr->pBuffer,
+		eRPCError = RPC_RegisterBuffer(pCompPrv->hRemoteComp, pBufferHdr->pBuffer,-1,
 									   &pAuxBuf0, &pAuxBuf1,
 									   GrallocPointers);
 		PROXY_checkRpcError();
@@ -826,8 +858,7 @@ EXIT:
 		       pBufferHdr->nFilledLen = nFilledLen;
 		       pBufferHdr->nAllocLen = nAllocLen;
 #ifdef ENABLE_GRALLOC_BUFFER
-		RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf0);
-		RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf1);
+               RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf0, pAuxBuf1, GrallocPointers);
 #endif
 	}
 	    }
