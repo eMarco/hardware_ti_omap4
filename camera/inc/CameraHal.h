@@ -48,11 +48,7 @@
 #include <ui/GraphicBufferMapper.h>
 #include <hal_public.h>
 
-#ifdef USE_LIBION_TI
 #include <ion_ti/ion.h>
-#else
-#include <ion/ion.h>
-#endif
 
 #include "Common.h"
 #include "MessageQueue.h"
@@ -64,12 +60,16 @@
 #define HAL_PIXEL_FORMAT_TI_NV12 0x100
 #define HAL_PIXEL_FORMAT_TI_Y8 0x103
 #define HAL_PIXEL_FORMAT_TI_Y16 0x104
-#define HAL_PIXEL_FORMAT_TI_UYVY 0x105
 
 #define MIN_WIDTH           640
 #define MIN_HEIGHT          480
+#ifdef OMAP_TUNA
+#define PICTURE_WIDTH   2592 /* 5mp - 2560. 8mp - 3280 */ /* Make sure it is a multiple of 16. */
+#define PICTURE_HEIGHT  1944 /* 5mp - 2048. 8mp - 2464 */ /* Make sure it is a multiple of 16. */
+#else
 #define PICTURE_WIDTH   3264 /* 5mp - 2560. 8mp - 3280 */ /* Make sure it is a multiple of 16. */
 #define PICTURE_HEIGHT  2448 /* 5mp - 2048. 8mp - 2464 */ /* Make sure it is a multiple of 16. */
+#endif
 #define PREVIEW_WIDTH 176
 #define PREVIEW_HEIGHT 144
 #define PIXEL_FORMAT           V4L2_PIX_FMT_UYVY
@@ -94,12 +94,12 @@
                              GRALLOC_USAGE_SW_WRITE_NEVER
 
 //Enables Absolute PPM measurements in logcat
+#ifdef CAMERAHAL_SUPERVERBOSE
 #define PPM_INSTRUMENTATION_ABS 1
+#endif
 
 #define LOCK_BUFFER_TRIES 5
 #define HAL_PIXEL_FORMAT_NV12 0x100
-
-#define OP_STR_SIZE 100
 
 #define NONNEG_ASSIGN(x,y) \
     if(x > -1) \
@@ -353,17 +353,6 @@ typedef struct _CameraBuffer {
     int stride;
     int height;
     const char *format;
-
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    struct timeval ppmStamp;
-
-#endif
-
-    /* These are for buffers which include borders */
-    int offset; // where valid data starts
-    int actual_size; // size of the entire buffer with borders
-    int privateData;
 } CameraBuffer;
 
 void * camera_buffer_get_omx_ptr (CameraBuffer *buffer);
@@ -412,8 +401,8 @@ class CameraFrame
     mFrameMask(0),
     mQuirks(0)
     {
-      mYuv[0] = 0; // NULL is meant for pointers
-      mYuv[1] = 0; // NULL is meant for pointers
+      mYuv[0] = 0; //NULL;
+      mYuv[1] = 0; //NULL;
 
 #ifdef OMAP_ENHANCEMENT_CPCAM
         mMetaData = 0;
@@ -631,9 +620,6 @@ public:
     //additional methods used for memory mapping
     virtual uint32_t * getOffsets() = 0;
     virtual int getFd() = 0;
-    virtual CameraBuffer * getBuffers(bool reset = false) { return NULL; }
-    virtual unsigned int getSize() {return 0; }
-    virtual int getBufferCount() {return -1; }
 
     virtual int freeBufferList(CameraBuffer * buf) = 0;
 
@@ -730,7 +716,6 @@ public:
     void setVideoRes(int width, int height);
 
     void flushEventQueue();
-    void setExternalLocking(bool extBuffLocking);
 
     //Internal class definitions
     class NotificationThread : public android::Thread {
@@ -766,8 +751,6 @@ private:
     void copyAndSendPreviewFrame(CameraFrame* frame, int32_t msgType);
     size_t calculateBufferSize(size_t width, size_t height, const char *pixelFormat);
     const char* getContstantForPixelFormat(const char *pixelFormat);
-    void lockBufferAndUpdatePtrs(CameraFrame* frame);
-    void unlockBufferAndUpdatePtrs(CameraFrame* frame);
 
 private:
     mutable android::Mutex mLock;
@@ -822,8 +805,6 @@ private:
 
     int mVideoWidth;
     int mVideoHeight;
-
-    bool mExternalLocking;
 
 };
 
@@ -1022,7 +1003,7 @@ class DisplayAdapter : public BufferProvider, public virtual android::RefBase
 public:
     DisplayAdapter();
 
-#ifdef OMAP_ENHANCEMENT_CPCAM
+#ifdef OMAP_ENHANCEMENT
     preview_stream_extended_ops_t * extendedOps() const {
         return mExtendedOps;
     }
@@ -1055,12 +1036,12 @@ public:
 
     // Get min buffers display needs at any given time
     virtual status_t minUndequeueableBuffers(int& unqueueable) = 0;
-
-    // Given a vector of DisplayAdapters find the one corresponding to str
-    virtual bool match(const char * str) { return false; }
+protected:
+    virtual const char* getPixFormatConstant(const char* parameters_format) const;
+    virtual size_t getBufSize(const char* parameters_format, int width, int height) const;
 
 private:
-#ifdef OMAP_ENHANCEMENT_CPCAM
+#ifdef OMAP_ENHANCEMENT
     preview_stream_extended_ops_t * mExtendedOps;
 #endif
 };
@@ -1081,14 +1062,6 @@ class CameraHal
 {
 
 public:
-    enum SocFamily {
-        SocFamily_Undefined = -1,
-        SocFamily_Omap4430 = 0,
-        SocFamily_Omap4460,
-        SocFamily_Omap4470,
-        SocFamily_ElementCount    // element count of SocFamily
-    };
-
     ///Constants
     static const int NO_BUFFERS_PREVIEW;
     static const int NO_BUFFERS_IMAGE_CAPTURE;
@@ -1158,11 +1131,6 @@ public:
      */
     int setBufferSource(struct preview_stream_ops *tapin, struct preview_stream_ops *tapout);
 #endif
-
-    /**
-     * Release a tap-in or tap-out point.
-     */
-    int releaseBufferSource(struct preview_stream_ops *tapin, struct preview_stream_ops *tapout);
 
     /**
      * Stop a previously started preview.
@@ -1260,9 +1228,6 @@ public:
 
     status_t storeMetaDataInBuffers(bool enable);
 
-    // Use external locking for graphic buffers
-    void setExternalLocking(bool extBuffLocking);
-
      //@}
 
 /*--------------------Internal Member functions - Public---------------------------------*/
@@ -1305,14 +1270,6 @@ public:
     void eventCallback(CameraHalEvent* event);
     void setEventProvider(int32_t eventMask, MessageNotifier * eventProvider);
 
-    static const char* getPixelFormatConstant(const char* parameters_format);
-    static size_t calculateBufferSize(const char* parameters_format, int width, int height);
-    static void getXYFromOffset(unsigned int *x, unsigned int *y,
-                                unsigned int offset, unsigned int stride,
-                                const char* format);
-    static unsigned int getBPP(const char* format);
-    static bool parsePair(const char *str, int *first, int *second, char delim);
-
 /*--------------------Internal Member functions - Private---------------------------------*/
 private:
 
@@ -1346,7 +1303,8 @@ private:
 
     /** Allocate image capture buffers */
     status_t allocImageBufs(unsigned int width, unsigned int height, size_t length,
-                            const char* previewFormat, unsigned int bufferCount);
+                            const char* previewFormat, unsigned int bufferCount,
+                            unsigned int *max_queueable);
 
     /** Allocate Raw buffers */
     status_t allocRawBufs(int width, int height, const char* previewFormat, int bufferCount);
@@ -1387,18 +1345,14 @@ private:
 
     void forceStopPreview();
 
+    void getPreferredPreviewRes(int *width, int *height);
     void resetPreviewRes(android::CameraParameters *params);
 
     // Internal __takePicture function - used in public takePicture() and reprocess()
-    int   __takePicture(const char* params, struct timeval *captureStart = NULL);
+    int   __takePicture(const char* params);
     //@}
 
-    status_t setTapoutLocked(struct preview_stream_ops *out);
-    status_t releaseTapoutLocked(struct preview_stream_ops *out);
-    status_t setTapinLocked(struct preview_stream_ops *in);
-    status_t releaseTapinLocked(struct preview_stream_ops *in);
 
-    static SocFamily getSocFamily();
 /*----------Member variables - Public ---------------------*/
 public:
     int32_t mMsgEnabled;
@@ -1419,16 +1373,12 @@ public:
     android::sp<AppCallbackNotifier> mAppCallbackNotifier;
     android::sp<DisplayAdapter> mDisplayAdapter;
     android::sp<MemoryManager> mMemoryManager;
-
-    android::Vector< android::sp<DisplayAdapter> > mOutAdapters;
-    android::Vector< android::sp<DisplayAdapter> > mInAdapters;
-
-    // TODO(XXX): Even though we support user setting multiple BufferSourceAdapters now
-    // only one tap in surface and one tap out surface is supported at a time.
+    // TODO(XXX): May need to keep this as a vector in the future
+    // when we can have multiple tap-in/tap-out points
     android::sp<DisplayAdapter> mBufferSourceAdapter_In;
     android::sp<DisplayAdapter> mBufferSourceAdapter_Out;
 
-#ifdef OMAP_ENHANCEMENT_CPCAM
+#ifdef OMAP_ENHANCEMENT
     preview_stream_extended_ops_t * mExtendedPreviewStreamOps;
 #endif
 
@@ -1494,7 +1444,6 @@ private:
     uint32_t *mImageOffsets;
     int mImageFd;
     int mImageLength;
-    unsigned int mImageCount;
     CameraBuffer *mPreviewBuffers;
     uint32_t *mPreviewOffsets;
     int mPreviewLength;
@@ -1527,10 +1476,6 @@ private:
     int mVideoHeight;
 
     android::String8 mCapModeBackup;
-
-    bool mExternalLocking;
-
-    const SocFamily mSocFamily;
 };
 
 } // namespace Camera

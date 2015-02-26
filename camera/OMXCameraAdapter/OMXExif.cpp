@@ -237,10 +237,17 @@ status_t OMXCameraAdapter::setupEXIF()
     struct timeval sTv;
     struct tm *pTime;
     OMXCameraPortParameters * capData = NULL;
-    CameraBuffer *memmgr_buf_array;
+    MemoryManager memMgr;
+    CameraBuffer *memmgr_buf_array = NULL;
     int buf_size = 0;
 
     LOG_FUNCTION_NAME;
+
+    ret = memMgr.initialize();
+    if ( ret != OK ) {
+        CAMHAL_LOGE("MemoryManager initialization failed, error: %d", ret);
+        return ret;
+    }
 
     sharedBuffer.pSharedBuff = NULL;
     capData = &mCameraAdapterParameters.mCameraPortParams[mCameraAdapterParameters.mImagePortIndex];
@@ -269,7 +276,7 @@ status_t OMXCameraAdapter::setupEXIF()
         buf_size = ((buf_size+4095)/4096)*4096;
         sharedBuffer.nSharedBuffSize = buf_size;
 
-        memmgr_buf_array = mMemMgr.allocateBufferList(0, 0, NULL, buf_size, 1);
+        memmgr_buf_array = memMgr.allocateBufferList(0, 0, NULL, buf_size, 1);
         sharedBuffer.pSharedBuff = (OMX_U8*)camera_buffer_get_omx_ptr(&memmgr_buf_array[0]);
         startPtr =  ( OMX_U8 * ) memmgr_buf_array[0].opaque;
 
@@ -498,7 +505,7 @@ status_t OMXCameraAdapter::setupEXIF()
 
     if ( NULL != memmgr_buf_array )
         {
-        mMemMgr.freeBufferList(memmgr_buf_array);
+        memMgr.freeBufferList(memmgr_buf_array);
         }
 
     LOG_FUNCTION_NAME_EXIT;
@@ -560,13 +567,13 @@ status_t OMXCameraAdapter::setupEXIF_libjpeg(ExifElementsTable* exifTable,
 
     if ((NO_ERROR == ret)) {
         char temp_value[5];
-        snprintf(temp_value, sizeof(temp_value)/sizeof(char), "%lu", capData->mWidth);
+        snprintf(temp_value, sizeof(temp_value)/sizeof(char), "%u", capData->mWidth);
         ret = exifTable->insertElement(TAG_IMAGE_WIDTH, temp_value);
      }
 
     if ((NO_ERROR == ret)) {
         char temp_value[5];
-        snprintf(temp_value, sizeof(temp_value)/sizeof(char), "%lu", capData->mHeight);
+        snprintf(temp_value, sizeof(temp_value)/sizeof(char), "%u", capData->mHeight);
         ret = exifTable->insertElement(TAG_IMAGE_LENGTH, temp_value);
      }
 

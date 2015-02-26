@@ -213,11 +213,10 @@ public:
         {
         INITIAL_MODE = -1,
         HIGH_SPEED = 1,
-        HIGH_QUALITY,
-        VIDEO_MODE,
-        HIGH_QUALITY_ZSL,
-        CP_CAM,
-        VIDEO_MODE_HQ,
+        HIGH_QUALITY = 2,
+        VIDEO_MODE = 3,
+        HIGH_QUALITY_ZSL = 4,
+        CP_CAM = 5,
         };
 
     enum IPPMode
@@ -259,13 +258,12 @@ public:
     enum CaptureSettingsFlags {
         SetFormat               = 1 << 0,
         SetThumb                = 1 << 1,
-        SetBurstExpBracket      = 1 << 2,
+        SetExpBracket           = 1 << 2,
         SetQuality              = 1 << 3,
         SetRotation             = 1 << 4,
+        SetBurst                = 1 << 5,
         ECaptureSettingMax,
-        ECapturesettingsAll = ( ((ECaptureSettingMax -1 ) << 1) -1 ), /// all possible flags raised
-        ECaptureParamSettings = SetFormat | SetThumb | SetQuality | SetBurstExpBracket, // Settings set with SetParam
-        ECaptureConfigSettings = (ECapturesettingsAll & ~ECaptureParamSettings)
+        ECapturesettingsAll = ( ((ECaptureSettingMax -1 ) << 1) -1 ) /// all possible flags raised
     };
 
     enum PreviewSettingsFlags {
@@ -352,7 +350,6 @@ public:
             OMX_U32                         mMaxFrameRate;
             CameraFrame::FrameType          mImageType;
             OMX_TI_STEREOFRAMELAYOUTTYPE    mFrameLayoutType;
-            CameraBufferType                mBufferType;
 
             CameraBuffer * lookup_omx_buffer (OMX_BUFFERHEADERTYPE *pBufHeader);
             enum {
@@ -579,16 +576,14 @@ private:
                                 const OMX_BOOL data, const char *msg);
     status_t setParameter3ABoolInvert(const OMX_INDEXTYPE omx_idx,
                                       const OMX_BOOL data, const char *msg);
-    status_t setAlgoExternalGamma(Gen3A_settings& Gen3A);
+#ifndef OMAP_TUNA
+    status_t setAlgoFixedGamma(Gen3A_settings& Gen3A);
     status_t setAlgoNSF1(Gen3A_settings& Gen3A);
     status_t setAlgoNSF2(Gen3A_settings& Gen3A);
     status_t setAlgoSharpening(Gen3A_settings& Gen3A);
     status_t setAlgoThreeLinColorMap(Gen3A_settings& Gen3A);
     status_t setAlgoGIC(Gen3A_settings& Gen3A);
-
-    //Gamma table
-    void updateGammaTable(const char* gamma);
-    status_t setGammaTable(Gen3A_settings& Gen3A);
+#endif
 
     status_t getEVCompensation(Gen3A_settings& Gen3A);
     status_t getWBMode(Gen3A_settings& Gen3A);
@@ -603,8 +598,10 @@ private:
     status_t set3ALock(OMX_BOOL toggleExp, OMX_BOOL toggleWb, OMX_BOOL toggleFocus);
 
     //Stereo 3D
+#ifndef OMAP_TUNA
     void setParamS3D(OMX_U32 port, const char *valstr);
     status_t setS3DFrameLayout(OMX_U32 port) const;
+#endif
 
     //API to set FrameRate using VFR interface
     status_t setVFramerate(OMX_U32 minFrameRate,OMX_U32 maxFrameRate);
@@ -672,11 +669,13 @@ private:
                                          size_t,
                                          char*,
                                          size_t);
+#ifndef OMAP_TUNA
     static status_t encodeSizeCap3D(OMX_TI_CAPRESTYPE&,
                                     const CapResolution*,
                                     size_t ,
                                     char * ,
                                     size_t);
+#endif
     static status_t insertImageSizes(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertPreviewSizes(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertThumbSizes(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
@@ -699,14 +698,20 @@ private:
     static status_t insertDefaults(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertLocks(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertAreas(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
+#ifndef OMAP_TUNA
     static status_t insertMechanicalMisalignmentCorrection(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
+#endif
     static status_t insertCaptureModes(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertVideoSizes(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertFacing(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
+#ifndef OMAP_TUNA
     static status_t insertFocalLength(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
+#endif
     static status_t insertAutoConvergenceModes(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertManualConvergenceRange(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
+#ifndef OMAP_TUNA
     static status_t insertLayout(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
+#endif
     static status_t insertVideoSnapshotSupported(CameraProperties::Properties*, OMX_TI_CAPTYPE&);
     static status_t insertVNFSupported(CameraProperties::Properties* params, OMX_TI_CAPTYPE &caps);
     static status_t insertVSTABSupported(CameraProperties::Properties* params, OMX_TI_CAPTYPE &caps);
@@ -720,10 +725,12 @@ private:
                                   BaseCameraAdapter::AdapterState state);
 
     //Exposure Bracketing
+#ifndef OMAP_TUNA
     status_t initVectorShot();
     status_t setVectorShot(int *evValues, int *evValues2, int *evModes2,
                            size_t evCount, size_t frameCount,
                            bool flush, OMX_BRACKETMODETYPE bracketMode);
+#endif
     status_t setVectorStop(bool toPreview = false);
     status_t setExposureBracketing(int *evValues, int *evValues2,
                                    size_t evCount, size_t frameCount,
@@ -775,6 +782,7 @@ private:
                                   camera_request_memory allocator) const;
 #endif
 
+#ifndef OMAP_TUNA
     // Mechanical Misalignment Correction
     status_t setMechanicalMisalignmentCorrection(bool enable);
 
@@ -786,6 +794,7 @@ private:
     status_t fseekDCCuseCasePos(FILE *pFile);
     FILE * fopenCameraDCC(const char *dccFolderPath);
     FILE * parseDCCsubDir(DIR *pDir, char *path);
+#endif
 
 #ifdef CAMERAHAL_OMX_PROFILING
     status_t storeProfilingData(OMX_BUFFERHEADERTYPE* pBuffHeader);
@@ -895,16 +904,22 @@ private:
 
     //OMX Capabilities data
     static const CapResolution mImageCapRes [];
+#ifndef OMAP_TUNA
     static const CapResolution mImageCapResSS [];
     static const CapResolution mImageCapResTB [];
+#endif
     static const CapResolution mPreviewRes [];
+#ifndef OMAP_TUNA
     static const CapResolution mPreviewResSS [];
     static const CapResolution mPreviewResTB [];
+#endif
     static const CapResolution mPreviewPortraitRes [];
     static const CapResolution mThumbRes [];
     static const CapPixelformat mPixelformats [];
+#ifndef OMAP_TUNA
     static const userToOMX_LUT mFrameLayout [];
     static const LUTtype mLayoutLUT;
+#endif
     static const CapCodingFormat mImageCodingFormat[];
     static const CapFramerate mFramerates [];
     static const CapU32 mSensorNames[] ;
@@ -916,9 +931,6 @@ private:
     static const int SENSORID_OV14825;
     static const int SENSORID_S5K4E1GA;
     static const int SENSORID_S5K6A1GX03;
-    static const int SENSORID_OV8830;
-    static const int SENSORID_OV2722;
-    static const int SENSORID_OV9726;
     static const CapU32 mFacing [];
     static const userToOMX_LUT mAutoConvergence [];
     static const LUTtype mAutoConvergenceLUT;
@@ -946,16 +958,24 @@ private:
     static const char DEFAULT_THUMBNAIL_QUALITY[];
     static const char DEFAULT_THUMBNAIL_SIZE[];
     static const char DEFAULT_PICTURE_FORMAT[];
+#ifndef OMAP_TUNA
     static const char DEFAULT_S3D_PICTURE_LAYOUT[];
+#endif
     static const char DEFAULT_PICTURE_SIZE[];
+#ifndef OMAP_TUNA
     static const char DEFAULT_PICTURE_SS_SIZE[];
     static const char DEFAULT_PICTURE_TB_SIZE[];
+#endif
     static const char DEFAULT_PREVIEW_FORMAT[];
     static const char DEFAULT_FRAMERATE[];
+#ifndef OMAP_TUNA
     static const char DEFAULT_S3D_PREVIEW_LAYOUT[];
+#endif
     static const char DEFAULT_PREVIEW_SIZE[];
+#ifndef OMAP_TUNA
     static const char DEFAULT_PREVIEW_SS_SIZE[];
     static const char DEFAULT_PREVIEW_TB_SIZE[];
+#endif
     static const char DEFAULT_NUM_PREV_BUFS[];
     static const char DEFAULT_NUM_PIC_BUFS[];
     static const char DEFAULT_SATURATION[];
@@ -969,13 +989,19 @@ private:
     static const char DEFAULT_MAX_FD_SW_FACES[];
     static const char * DEFAULT_AE_LOCK;
     static const char * DEFAULT_AWB_LOCK;
+#ifdef OMAP_TUNA
+    static const char DEFAULT_FOCAL_LENGTH_PRIMARY[];
+    static const char DEFAULT_FOCAL_LENGTH_SECONDARY[];
+#endif
     static const char DEFAULT_HOR_ANGLE[];
     static const char DEFAULT_VER_ANGLE[];
     static const char DEFAULT_VIDEO_SIZE[];
     static const char DEFAULT_SENSOR_ORIENTATION[];
     static const char DEFAULT_AUTOCONVERGENCE_MODE[];
     static const char DEFAULT_MANUAL_CONVERGENCE[];
+#ifndef OMAP_TUNA
     static const char * DEFAULT_MECHANICAL_MISALIGNMENT_CORRECTION_MODE;
+#endif
     static const char DEFAULT_EXIF_MODEL[];
     static const char DEFAULT_EXIF_MAKE[];
 
@@ -1104,7 +1130,6 @@ private:
     bool mCaptureConfigured;
     unsigned int mPendingCaptureSettings;
     unsigned int mPendingPreviewSettings;
-    unsigned int mPendingReprocessSettings;
     OMX_TI_ANCILLARYDATATYPE* mCaptureAncillaryData;
     OMX_TI_WHITEBALANCERESULTTYPE* mWhiteBalanceData;
     bool mReprocConfigured;
@@ -1201,8 +1226,10 @@ private:
 
     bool mSetFormatDone;
 
+#ifndef OMAP_TUNA
     OMX_TI_DCCDATATYPE mDccData;
     android::Mutex mDccDataLock;
+#endif
 
     int mMaxZoomSupported;
     android::Mutex mImageCaptureLock;
@@ -1210,8 +1237,6 @@ private:
     bool mTunnelDestroyed;
     bool mPreviewPortInitialized;
 
-    // Used for allocations that need to be sent to Ducati
-    MemoryManager mMemMgr;
 };
 
 } // namespace Camera

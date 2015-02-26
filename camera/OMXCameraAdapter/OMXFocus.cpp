@@ -177,8 +177,7 @@ status_t OMXCameraAdapter::doAutoFocus()
         // force AF, Ducati will take care of whether CAF
         // or AF will be performed, depending on light conditions
         if ( focusControl.eFocusControl == OMX_IMAGE_FocusControlAuto &&
-             ( focusStatus.eFocusStatus == OMX_FocusStatusRequest ||
-               focusStatus.eFocusStatus == OMX_FocusStatusUnableToReach ||
+             ( focusStatus.eFocusStatus == OMX_FocusStatusUnableToReach ||
                focusStatus.eFocusStatus == OMX_FocusStatusLost ) ) {
             focusControl.eFocusControl = OMX_IMAGE_FocusControlAutoLock;
         }
@@ -201,7 +200,7 @@ status_t OMXCameraAdapter::doAutoFocus()
             }
 
             // configure focus timeout based on capture mode
-            timeout = (mCapMode == VIDEO_MODE) || (mCapMode == VIDEO_MODE_HQ) ?
+            timeout = (mCapMode == VIDEO_MODE) ?
                             ( ( nsecs_t ) AF_VIDEO_CALLBACK_TIMEOUT * 1000 ) :
                             ( ( nsecs_t ) AF_IMAGE_CALLBACK_TIMEOUT * 1000 );
 
@@ -267,7 +266,7 @@ status_t OMXCameraAdapter::stopAutoFocus()
         CAMHAL_LOGEB("Error while stopping focus 0x%x", eError);
         return Utils::ErrorUtils::omxToAndroidError(eError);
     }
-#ifdef CAMERAHAL_TUNA
+#ifdef OMAP_TUNA
     else {
         // This is a WA. Usually the OMX Camera component should
         // generate AF status change OMX event fairly quickly
@@ -715,10 +714,17 @@ status_t OMXCameraAdapter::setTouchFocus()
 
     OMX_ALGOAREASTYPE *focusAreas;
     OMX_TI_CONFIG_SHAREDBUFFER sharedBuffer;
+    MemoryManager memMgr;
     CameraBuffer *bufferlist;
     int areasSize = 0;
 
     LOG_FUNCTION_NAME;
+
+    ret = memMgr.initialize();
+    if ( ret != OK ) {
+        CAMHAL_LOGE("MemoryManager initialization failed, error: %d", ret);
+        return ret;
+    }
 
     if ( OMX_StateInvalid == mComponentState )
         {
@@ -730,7 +736,7 @@ status_t OMXCameraAdapter::setTouchFocus()
         {
 
         areasSize = ((sizeof(OMX_ALGOAREASTYPE)+4095)/4096)*4096;
-        bufferlist = mMemMgr.allocateBufferList(0, 0, NULL, areasSize, 1);
+        bufferlist = memMgr.allocateBufferList(0, 0, NULL, areasSize, 1);
         focusAreas = (OMX_ALGOAREASTYPE*) bufferlist[0].opaque;
 
         OMXCameraPortParameters * mPreviewData = NULL;
@@ -816,7 +822,7 @@ status_t OMXCameraAdapter::setTouchFocus()
     EXIT:
         if (NULL != bufferlist)
             {
-            mMemMgr.freeBufferList (bufferlist);
+            memMgr.freeBufferList (bufferlist);
             }
         }
 
@@ -829,16 +835,8 @@ void OMXCameraAdapter::handleFocusCallback() {
     OMX_PARAM_FOCUSSTATUSTYPE eFocusStatus;
     CameraHalEvent::FocusStatus focusStatus = CameraHalEvent::FOCUS_STATUS_FAIL;
     status_t ret = NO_ERROR;
-    BaseCameraAdapter::AdapterState nextState, currentState;
+    BaseCameraAdapter::AdapterState nextState;
     BaseCameraAdapter::getNextState(nextState);
-    BaseCameraAdapter::getState(currentState);
-
-    // Dropping AF callback if it triggered in non AF state
-    if ((currentState != AF_STATE) && (currentState != AF_ZOOM_STATE) &&
-        (currentState != VIDEO_AF_STATE) && (nextState != VIDEO_AF_STATE) &&
-        (nextState != AF_STATE) && (nextState != AF_ZOOM_STATE)) {
-        return;
-    }
 
     OMX_INIT_STRUCT(eFocusStatus, OMX_PARAM_FOCUSSTATUSTYPE);
 

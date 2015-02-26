@@ -60,9 +60,6 @@ status_t OMXCameraAdapter::setParametersReprocess(const android::CameraParameter
         } else if (strcmp(valstr, android::CameraParameters::PIXEL_FORMAT_BAYER_RGGB) == 0) {
             CAMHAL_LOGDA("RAW Picture format selected");
             pixFormat = OMX_COLOR_FormatRawBayer10bit;
-        } else if (strcmp(valstr, android::CameraParameters::PIXEL_FORMAT_YUV422I) == 0) {
-            CAMHAL_LOGDA("YUV422i Picture format selected");
-            pixFormat = OMX_COLOR_FormatCbYCrY;
         } else {
             CAMHAL_LOGDA("Format not supported, selecting YUV420SP by default");
             pixFormat = OMX_COLOR_FormatYUV420SemiPlanar;
@@ -77,8 +74,7 @@ status_t OMXCameraAdapter::setParametersReprocess(const android::CameraParameter
         portData->mWidth = w;
         portData->mHeight = h;
 
-        if ( ( OMX_COLOR_FormatRawBayer10bit == pixFormat ) ||
-             ( OMX_COLOR_FormatCbYCrY == pixFormat ) ) {
+        if ( OMX_COLOR_FormatRawBayer10bit == pixFormat ) {
             portData->mStride = w * 2;
         } else {
             portData->mStride = s;
@@ -86,7 +82,12 @@ status_t OMXCameraAdapter::setParametersReprocess(const android::CameraParameter
 
         portData->mColorFormat = pixFormat;
 
-        mPendingReprocessSettings |= SetFormat;
+        ret = setFormat(OMX_CAMERA_PORT_VIDEO_IN_VIDEO, *portData);
+        if ( ret != NO_ERROR ) {
+            CAMHAL_LOGEB("setFormat() failed %d", ret);
+            LOG_FUNCTION_NAME_EXIT;
+            return ret;
+        }
     }
 
     LOG_FUNCTION_NAME_EXIT;
@@ -113,20 +114,14 @@ status_t OMXCameraAdapter::startReprocess()
         android::AutoMutex lock(mBurstLock);
 
         for ( int index = 0 ; index < portData->mMaxQueueable ; index++ ) {
-            CAMHAL_LOGDB("Queuing buffer on video input port - %p, offset: %d, length: %d",
-                         portData->mBufferHeader[index]->pBuffer,
-                         portData->mBufferHeader[index]->nOffset,
-                         portData->mBufferHeader[index]->nFilledLen);
+            CAMHAL_LOGDB("Queuing buffer on video input port - %p",
+                         portData->mBufferHeader[index]->pBuffer);
             portData->mStatus[index] = OMXCameraPortParameters::FILL;
             eError = OMX_EmptyThisBuffer(mCameraAdapterParameters.mHandleComp,
                     (OMX_BUFFERHEADERTYPE*)portData->mBufferHeader[index]);
             GOTO_EXIT_IF((eError!=OMX_ErrorNone), eError);
         }
     }
-
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-            CameraHal::PPM("startReprocess buffers queued on video port: ", &mStartCapture);
-#endif
 
     return (ret | Utils::ErrorUtils::omxToAndroidError(eError));
 
@@ -225,44 +220,21 @@ status_t OMXCameraAdapter::UseBuffersReprocess(CameraBuffer *bufArr, int num)
         return BAD_VALUE;
     }
 
-    CAMHAL_ASSERT(num > 0);
-
     if (mAdapterState == REPROCESS_STATE) {
         stopReprocess();
     } else if (mAdapterState == CAPTURE_STATE) {
         stopImageCapture();
-        stopReprocess();
+        disableImagePort();
     }
 
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    CameraHal::PPM("Reprocess stopping image capture and disabling image port: ", &bufArr->ppmStamp);
-
-#endif
+    if (mReprocConfigured) {
+        return NO_ERROR;
+    }
 
     portData->mNumBufs = num;
 
     // Configure
     ret = setParametersReprocess(mParams, bufArr, mAdapterState);
-
-    if (mReprocConfigured) {
-        if (mPendingReprocessSettings & ECaptureParamSettings) {
-            stopReprocess();
-        } else {
-            // Tap in port has been already configured.
-            return NO_ERROR;
-        }
-    }
-
-    if (mPendingReprocessSettings & SetFormat) {
-        mPendingReprocessSettings &= ~SetFormat;
-        ret = setFormat(OMX_CAMERA_PORT_VIDEO_IN_VIDEO, *portData);
-        if ( ret != NO_ERROR ) {
-            CAMHAL_LOGEB("setFormat() failed %d", ret);
-            LOG_FUNCTION_NAME_EXIT;
-            return ret;
-        }
-    }
 
     // Configure DOMX to use either gralloc handles or vptrs
     OMX_TI_PARAMUSENATIVEBUFFER domxUseGrallocHandles;
@@ -286,12 +258,6 @@ status_t OMXCameraAdapter::UseBuffersReprocess(CameraBuffer *bufArr, int num)
         CAMHAL_LOGEB("OMX_SetParameter - %x", eError);
     }
     GOTO_EXIT_IF((eError!=OMX_ErrorNone), eError);
-
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    CameraHal::PPM("Reprocess configuration done: ", &bufArr->ppmStamp);
-
-#endif
 
     // Enable Port
     ret = RegisterForEvent(mCameraAdapterParameters.mHandleComp,
@@ -329,8 +295,6 @@ status_t OMXCameraAdapter::UseBuffersReprocess(CameraBuffer *bufArr, int num)
         pBufferHdr->nVersion.s.nVersionMinor = 1 ;
         pBufferHdr->nVersion.s.nRevision = 0;
         pBufferHdr->nVersion.s.nStep =  0;
-        pBufferHdr->nOffset = bufArr[index].offset;
-        pBufferHdr->nFilledLen = bufArr[index].actual_size;
         portData->mBufferHeader[index] = pBufferHdr;
     }
 
@@ -357,12 +321,6 @@ status_t OMXCameraAdapter::UseBuffersReprocess(CameraBuffer *bufArr, int num)
     }
 
     mReprocConfigured = true;
-
-#if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
-
-    CameraHal::PPM("Reprocess video port enabled and buffers registered: ", &bufArr->ppmStamp);
-
-#endif
 
     return (ret | Utils::ErrorUtils::omxToAndroidError(eError));
 

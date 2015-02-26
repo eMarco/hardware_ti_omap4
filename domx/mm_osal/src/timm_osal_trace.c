@@ -139,16 +139,18 @@ void __TIMM_OSAL_TraceFunction(const __TIMM_OSAL_TRACE_LOCATION * loc,
 
 #if 0 // Original for reference
 #if ( TIMM_OSAL_DEBUG_TRACE_DETAIL > 1 )
-		LOG_PRI(ANDROID_LOG_DEBUG, LOG_TAG, "%s:%d\t%s()\t", simplify_path(loc->file), loc->line,
+		ALOGD("%s:%d\t%s()\t", simplify_path(loc->file), loc->line,
 		    loc->function);
 #endif
 #else // Prints function_name for ERROR, WARNING and ENTRY/EXIT
 	if ( (loc->level == TIMM_OSAL_TRACE_LEVEL_ERROR) || (loc->level == TIMM_OSAL_TRACE_LEVEL_WARNING) || (loc->level == TIMM_OSAL_TRACE_LEVEL_ENTERING) )
-		LOG_PRI(ANDROID_LOG_DEBUG, LOG_TAG, "%s:%d\t%s()\t", simplify_path(loc->file), loc->line,
+		ALOGD("%s:%d\t%s()\t", simplify_path(loc->file), loc->line,
 		    loc->function);
 #endif
 
-		LOG_PRI_VA(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ap);
+		char string[1000];
+		vsprintf(string, fmt, ap);
+		ALOGD("%s",string);
 
 #else
 

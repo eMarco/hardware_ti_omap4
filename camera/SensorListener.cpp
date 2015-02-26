@@ -51,11 +51,11 @@ static int sensor_events_listener(int fd, int events, void* data)
                 float radius = 0;
                 int tilt = 0, orient = 0;
 
-                CAMHAL_LOGVA("ACCELEROMETER EVENT");
-                CAMHAL_LOGVB(" azimuth = %f pitch = %f roll = %f",
-                             sen_events[i].vector.azimuth,
-                             sen_events[i].vector.pitch,
-                             sen_events[i].vector.roll);
+                CAMHAL_LOGSVA("ACCELEROMETER EVENT");
+                CAMHAL_LOGSVB(" azimuth = %f pitch = %f roll = %f",
+                              sen_events[i].vector.azimuth,
+                              sen_events[i].vector.pitch,
+                              sen_events[i].vector.roll);
                 // see http://en.wikipedia.org/wiki/Spherical_coordinate_system#Cartesian_coordinates
                 // about conversion from cartesian to spherical for orientation calculations
                 radius = (float) sqrt(x * x + y * y + z * z);
@@ -76,9 +76,9 @@ static int sensor_events_listener(int fd, int events, void* data)
                     orient = 0;
                 }
                 listener->handleOrientation(orient, tilt);
-                CAMHAL_LOGVB(" tilt = %d orientation = %d", tilt, orient);
+                CAMHAL_LOGSVB(" tilt = %d orientation = %d", tilt, orient);
             } else if (sen_events[i].type == android::Sensor::TYPE_GYROSCOPE) {
-                CAMHAL_LOGVA("GYROSCOPE EVENT");
+                CAMHAL_LOGSVA("GYROSCOPE EVENT");
             }
         }
     }
@@ -201,14 +201,10 @@ void SensorListener::enableSensor(sensor_type_t type) {
 
     if ((type & SENSOR_ORIENTATION) && !(sensorsEnabled & SENSOR_ORIENTATION)) {
         sensor = mgr.getDefaultSensor(android::Sensor::TYPE_ACCELEROMETER);
-        if(sensor) {
-            CAMHAL_LOGDB("orientation = %p (%s)", sensor, sensor->getName().string());
-            mSensorEventQueue->enableSensor(sensor);
-            mSensorEventQueue->setEventRate(sensor, ms2ns(100));
-            sensorsEnabled |= SENSOR_ORIENTATION;
-        } else {
-            CAMHAL_LOGDB("not enabling absent orientation sensor");
-        }
+        CAMHAL_LOGDB("orientation = %p (%s)", sensor, sensor->getName().string());
+        mSensorEventQueue->enableSensor(sensor);
+        mSensorEventQueue->setEventRate(sensor, ms2ns(100));
+        sensorsEnabled |= SENSOR_ORIENTATION;
     }
 
     LOG_FUNCTION_NAME_EXIT;

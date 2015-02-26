@@ -63,7 +63,7 @@ void AppCallbackNotifier::EncoderDoneCb(void* main_jpeg, void* thumb_jpeg, Camer
     Encoder_libjpeg::params *main_param = NULL, *thumb_param = NULL;
     size_t jpeg_size;
     uint8_t* src = NULL;
-    CameraBuffer *camera_buffer;
+    CameraBuffer *camera_buffer = NULL;
     android::sp<Encoder_libjpeg> encoder = NULL;
 
     LOG_FUNCTION_NAME;
@@ -201,7 +201,6 @@ status_t AppCallbackNotifier::initialize()
 
     mRecording = false;
     mPreviewing = false;
-    mExternalLocking = false;
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -302,13 +301,13 @@ bool AppCallbackNotifier::notificationThread()
 
     if(mEventQ.hasMsg()) {
         ///Received an event from one of the event providers
-        CAMHAL_LOGDA("Notification Thread received an event from event provider (CameraAdapter)");
+        CAMHAL_LOGSVA("Notification Thread received an event from event provider (CameraAdapter)");
         notifyEvent();
      }
 
     if(mFrameQ.hasMsg()) {
        ///Received a frame from one of the frame providers
-       //CAMHAL_LOGDA("Notification Thread received a frame from frame provider (CameraAdapter)");
+       CAMHAL_LOGSVA("Notification Thread received a frame from frame provider (CameraAdapter)");
        notifyFrame();
     }
 
@@ -576,7 +575,6 @@ static void copy2Dto1D(void *dst,
                 // Step 2: UV plane: convert NV12 to NV21 by swapping U & V
                 bufferDst_UV = (uint16_t *) (((uint8_t*)dst)+row*height);
 
-#ifdef ARCH_ARM_HAVE_NEON
                 for (int i = 0 ; i < height/2 ; i++, bufferSrc_UV += alignedRow/2) {
                     int n = width;
                     asm volatile (
@@ -619,16 +617,10 @@ static void copy2Dto1D(void *dst,
                     : "cc", "memory", "q0", "q1"
                     );
                 }
-#else
-                for ( int i = 0; i < height/2; ++i ) {
-                    for ( int j = 0; j < width/2; ++j ) {
-                        bufferDst_UV[j] = (bufferSrc_UV[j] >> 8) | (bufferSrc_UV[j] << 8);
-                    }
-                    bufferSrc_UV += stride/bytesPerPixel/2;
-                    bufferDst_UV += width/2;
-                }
-#endif
             } else if (strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_YUV420P) == 0) {
+                 uint16_t *bufferDst_U;
+                 uint16_t *bufferDst_V;
+
                 // Step 2: UV plane: convert NV12 to YV12 by de-interleaving U & V
                 // TODO(XXX): This version of CameraHal assumes NV12 format it set at
                 //            camera adapter to support YV12. Need to address for
@@ -637,10 +629,8 @@ static void copy2Dto1D(void *dst,
                 size_t yStride, uvStride, ySize, uvSize, size;
                 alignYV12(width, height, yStride, uvStride, ySize, uvSize, size);
 
-                uint16_t *bufferDst_V = (uint16_t *) (((uint8_t*)dst) + ySize);
-                uint16_t *bufferDst_U = (uint16_t *) (((uint8_t*)dst) + ySize + uvSize);
-
-#ifdef ARCH_ARM_HAVE_NEON
+                bufferDst_V = (uint16_t *) (((uint8_t*)dst) + ySize);
+                bufferDst_U = (uint16_t *) (((uint8_t*)dst) + ySize + uvSize);
                 int inc = (uvStride - width/2)/2;
 
                 for (int i = 0 ; i < height/2 ; i++, bufferSrc_UV += alignedRow/2) {
@@ -689,20 +679,7 @@ static void copy2Dto1D(void *dst,
                     bufferDst_U += inc;
                     bufferDst_V += inc;
                 }
-#else
-                uint8_t * udst = reinterpret_cast<uint8_t*>(bufferDst_V);
-                uint8_t * vdst = reinterpret_cast<uint8_t*>(bufferDst_U);
 
-                for ( int i = 0; i < height/2; ++i ) {
-                    for ( int j = 0; j < width/2; ++j ) {
-                        udst[j] = bufferSrc_UV[j] >> 8;
-                        vdst[j] = bufferSrc_UV[j] & 0x00ff;
-                    }
-                    bufferSrc_UV += stride/bytesPerPixel/2;
-                    udst += width/2;
-                    vdst += width/2;
-                }
-#endif
             }
             return ;
 
@@ -722,44 +699,6 @@ static void copy2Dto1D(void *dst,
     }
 }
 
-static void copyCroppedNV12(CameraFrame* frame, unsigned char *dst)
-{
-    unsigned int stride, width, height;
-    uint32_t offset, uvoffset;
-    size_t size;
-
-    CAMHAL_ASSERT(frame && dst);
-
-    offset = frame->mOffset;
-    stride = frame->mAlignment;
-    width = frame->mWidth;
-    height = frame->mHeight;
-    size = frame->mLength;
-    unsigned const char *src = (unsigned char *) frame->mBuffer->mapped;
-
-    // offset to beginning of uv plane
-    uvoffset = (offset + size) * 2 / 3;
-    // offset to beginning of valid region of uv plane
-    uvoffset += (offset - (offset % stride)) / 2 + (offset % stride);
-
-    // start of valid luma region
-    unsigned const char *luma = src + offset;
-    // start of valid chroma region
-    unsigned const char *chroma = src + uvoffset;
-
-    // copy luma and chroma line x line
-    for (unsigned int i = 0; i < height; i++) {
-        memcpy(dst, luma, width);
-        luma += stride;
-        dst += width;
-    }
-    for (unsigned int i = 0; i < height / 2; i++) {
-        memcpy(dst, chroma, width);
-        chroma += stride;
-        dst += width;
-    }
-}
-
 void AppCallbackNotifier::copyAndSendPictureFrame(CameraFrame* frame, int32_t msgType)
 {
     camera_memory_t* picture = NULL;
@@ -773,26 +712,13 @@ void AppCallbackNotifier::copyAndSendPictureFrame(CameraFrame* frame, int32_t ms
             goto exit;
         }
 
-        if (frame->mBuffer->format &&
-                (strcmp(frame->mBuffer->format, android::CameraParameters::PIXEL_FORMAT_YUV420SP) == 0) &&
-                (frame->mAlignment != frame->mWidth) &&
-                ( msgType == CAMERA_MSG_RAW_IMAGE )) {
-            size_t size;
+        picture = mRequestMemory(-1, frame->mLength, 1, NULL);
 
-            size = CameraHal::calculateBufferSize(frame->mBuffer->format, frame->mWidth, frame->mHeight);
-            picture = mRequestMemory(-1, size, 1, NULL);
-            if (picture && picture->data) {
-                copyCroppedNV12(frame, (unsigned char*) picture->data);
-            }
-        } else {
-            picture = mRequestMemory(-1, frame->mLength, 1, NULL);
-
-            if (NULL != picture) {
-                dest = picture->data;
-                if (NULL != dest) {
-                    src = (void *) ((unsigned int) frame->mBuffer->mapped + frame->mOffset);
-                    memcpy(dest, src, frame->mLength);
-                }
+        if (NULL != picture) {
+            dest = picture->data;
+            if (NULL != dest) {
+                src = (void *) ((unsigned int) frame->mBuffer->mapped + frame->mOffset);
+                memcpy(dest, src, frame->mLength);
             }
         }
     }
@@ -807,38 +733,6 @@ void AppCallbackNotifier::copyAndSendPictureFrame(CameraFrame* frame, int32_t ms
         }
         picture->release(picture);
     }
-}
-
-void AppCallbackNotifier::lockBufferAndUpdatePtrs(CameraFrame* frame)
-{
-    android::GraphicBufferMapper &mapper = android::GraphicBufferMapper::get();
-    android::Rect bounds;
-
-    bounds.left = 0;
-    bounds.top = 0;
-    bounds.right = frame->mWidth;
-    bounds.bottom = frame->mHeight;
-    void *y_uv[2];
-    buffer_handle_t *handle = reinterpret_cast<buffer_handle_t *>(frame->mBuffer->opaque);
-    mapper.lock(*handle, CAMHAL_GRALLOC_USAGE, bounds, y_uv);
-    frame->mBuffer->mapped = y_uv[0];
-    frame->mYuv[0] = reinterpret_cast<int>(frame->mBuffer->mapped);
-    frame->mYuv[1] = frame->mYuv[0] + (frame->mLength + frame->mOffset)*2/3;
-}
-
-void AppCallbackNotifier::unlockBufferAndUpdatePtrs(CameraFrame* frame)
-{
-    android::GraphicBufferMapper &mapper = android::GraphicBufferMapper::get();
-    buffer_handle_t *handle = reinterpret_cast<buffer_handle_t *>(frame->mBuffer->opaque);
-    mapper.unlock(*handle);
-    frame->mBuffer->mapped = NULL;
-    frame->mYuv[0] = NULL;
-    frame->mYuv[1] = NULL;
-}
-
-void AppCallbackNotifier::setExternalLocking(bool extBuffLocking)
-{
-    mExternalLocking = extBuffLocking;
 }
 
 void AppCallbackNotifier::copyAndSendPreviewFrame(CameraFrame* frame, int32_t msgType)
@@ -860,9 +754,7 @@ void AppCallbackNotifier::copyAndSendPreviewFrame(CameraFrame* frame, int32_t ms
         }
 
         dest = &mPreviewBuffers[mPreviewBufCount];
-        if (mExternalLocking) {
-            lockBufferAndUpdatePtrs(frame);
-        }
+
         CAMHAL_LOGVB("%d:copy2Dto1D(%p, %p, %d, %d, %d, %d, %d,%s)",
                      __LINE__,
                       dest,
@@ -884,8 +776,8 @@ void AppCallbackNotifier::copyAndSendPreviewFrame(CameraFrame* frame, int32_t ms
                     memset(dest->mapped, 0, (mPreviewMemory->size / MAX_BUFFERS));
                 }
             } else {
-              if ((NULL == frame->mYuv[0]) || (NULL == frame->mYuv[1])){
-                CAMHAL_LOGEA("Error! One of the YUV Pointer is NULL");
+              if ((0 == frame->mYuv[0]) || (0 == frame->mYuv[1])){ //NULL == frame->mYuv
+                CAMHAL_LOGEA("Error! One of the YUV Pointer is 0"); //is NULL
                 goto exit;
               }
               else{
@@ -912,10 +804,6 @@ void AppCallbackNotifier::copyAndSendPreviewFrame(CameraFrame* frame, int32_t ms
         android::AutoMutex locker(mLock);
         if ( mPreviewMemory )
             mDataCb(msgType, mPreviewMemory, mPreviewBufCount, NULL, mCallbackCookie);
-    }
-
-    if (mExternalLocking) {
-        unlockBufferAndUpdatePtrs(frame);
     }
 
     // increment for next buffer
@@ -1101,9 +989,9 @@ void AppCallbackNotifier::notifyFrame()
                         current_snapshot = (mPreviewBufCount + MAX_BUFFERS - 1) % MAX_BUFFERS;
                         tn_jpeg->src = (uint8_t *)mPreviewBuffers[current_snapshot].mapped;
                         tn_jpeg->src_size = mPreviewMemory->size / MAX_BUFFERS;
-                        tn_jpeg->dst_size = CameraHal::calculateBufferSize(previewFormat,
-                                                                tn_width,
-                                                                tn_height);
+                        tn_jpeg->dst_size = calculateBufferSize(tn_width,
+                                                                tn_height,
+                                                                previewFormat);
                         tn_jpeg->dst = (uint8_t*) malloc(tn_jpeg->dst_size);
                         tn_jpeg->quality = tn_quality;
                         tn_jpeg->in_width = width;
@@ -1192,20 +1080,18 @@ void AppCallbackNotifier::notifyFrame()
                                 bounds.top = 0;
                                 bounds.right = mVideoWidth;
                                 bounds.bottom = mVideoHeight;
-                                if (mExternalLocking) {
-                                    lockBufferAndUpdatePtrs(frame);
-                                }
+
                                 void *y_uv[2];
                                 mapper.lock((buffer_handle_t)vBuf, CAMHAL_GRALLOC_USAGE, bounds, y_uv);
                                 y_uv[1] = y_uv[0] + mVideoHeight*4096;
 
-                                structConvImage input =  {frame->mWidth,
-                                                          frame->mHeight,
+                                structConvImage input =  {(mmInt32)frame->mWidth,
+                                                          (mmInt32)frame->mHeight,
                                                           4096,
                                                           IC_FORMAT_YCbCr420_lp,
                                                           (mmByte *)frame->mYuv[0],
                                                           (mmByte *)frame->mYuv[1],
-                                                          frame->mOffset};
+                                                          (mmInt32)frame->mOffset};
 
                                 structConvImage output = {mVideoWidth,
                                                           mVideoHeight,
@@ -1217,9 +1103,6 @@ void AppCallbackNotifier::notifyFrame()
 
                                 VT_resizeFrame_Video_opt2_lp(&input, &output, NULL, 0);
                                 mapper.unlock((buffer_handle_t)vBuf->opaque);
-                                if (mExternalLocking) {
-                                    unlockBufferAndUpdatePtrs(frame);
-                                }
                                 videoMetadataBuffer->metadataBufferType = (int) android::kMetadataBufferTypeCameraSource;
                                 /* FIXME remove cast */
                                 videoMetadataBuffer->handle = (void *)vBuf->opaque;
@@ -1247,15 +1130,10 @@ void AppCallbackNotifier::notifyFrame()
                                 CAMHAL_LOGEA("Error! One of the video buffers is NULL");
                                 break;
                                 }
-                            if (mExternalLocking) {
-                                lockBufferAndUpdatePtrs(frame);
-                            }
+
                             *reinterpret_cast<buffer_handle_t*>(fakebuf->data) = reinterpret_cast<buffer_handle_t>(frame->mBuffer->mapped);
                             mDataCbTimestamp(frame->mTimestamp, CAMERA_MSG_VIDEO_FRAME, fakebuf, 0, mCallbackCookie);
                             fakebuf->release(fakebuf);
-                            if (mExternalLocking) {
-                                unlockBufferAndUpdatePtrs(frame);
-                            }
                             }
                         }
                     }
@@ -1581,6 +1459,49 @@ void AppCallbackNotifier::setFrameProvider(FrameNotifier *frameNotifier)
     LOG_FUNCTION_NAME_EXIT;
 }
 
+size_t AppCallbackNotifier::calculateBufferSize(size_t width, size_t height, const char *pixelFormat)
+{
+    size_t res = 0;
+
+    LOG_FUNCTION_NAME
+
+    if(strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_YUV422I) == 0) {
+        res = width*height*2;
+    } else if(strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_YUV420SP) == 0) {
+        res = (width*height*3)/2;
+    } else if(strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_RGB565) == 0) {
+        res = width*height*2;
+    } else if (strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_YUV420P) == 0) {
+        size_t yStride, uvStride, ySize, uvSize;
+        alignYV12(width, height, yStride, uvStride, ySize, uvSize, res);
+        mPreviewPixelFormat = android::CameraParameters::PIXEL_FORMAT_YUV420P;
+    }
+
+    LOG_FUNCTION_NAME_EXIT;
+
+    return res;
+}
+
+const char* AppCallbackNotifier::getContstantForPixelFormat(const char *pixelFormat) {
+    if (!pixelFormat) {
+        // returning NV12 as default
+        return android::CameraParameters::PIXEL_FORMAT_YUV420SP;
+    }
+
+    if(strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_YUV422I) == 0) {
+        return android::CameraParameters::PIXEL_FORMAT_YUV422I;
+    } else if(strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_YUV420SP) == 0 ) {
+        return android::CameraParameters::PIXEL_FORMAT_YUV420SP;
+    } else if(strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_RGB565) == 0) {
+        return android::CameraParameters::PIXEL_FORMAT_RGB565;
+    } else if(strcmp(pixelFormat, android::CameraParameters::PIXEL_FORMAT_YUV420P) == 0) {
+        return android::CameraParameters::PIXEL_FORMAT_YUV420P;
+    } else {
+        // returning NV12 as default
+        return android::CameraParameters::PIXEL_FORMAT_YUV420SP;
+    }
+}
+
 status_t AppCallbackNotifier::startPreviewCallbacks(android::CameraParameters &params, CameraBuffer *buffers, uint32_t *offsets, int fd, size_t length, size_t count)
 {
     unsigned int *bufArr;
@@ -1610,8 +1531,8 @@ status_t AppCallbackNotifier::startPreviewCallbacks(android::CameraParameters &p
     mPreviewWidth = w;
     mPreviewHeight = h;
     mPreviewStride = 4096;
-    mPreviewPixelFormat = CameraHal::getPixelFormatConstant(params.getPreviewFormat());
-    size = CameraHal::calculateBufferSize(mPreviewPixelFormat, w, h);
+    mPreviewPixelFormat = getContstantForPixelFormat(params.getPreviewFormat());
+    size = calculateBufferSize(w, h, mPreviewPixelFormat);
 
     mPreviewMemory = mRequestMemory(-1, size, AppCallbackNotifier::MAX_BUFFERS, NULL);
     if (!mPreviewMemory) {

@@ -241,14 +241,12 @@ class Gen3A_settings{
     OMX_BOOL FocusLock;
     OMX_BOOL WhiteBalanceLock;
 
-    OMX_BOOL AlgoExternalGamma;
+    OMX_BOOL AlgoFixedGamma;
     OMX_BOOL AlgoNSF1;
     OMX_BOOL AlgoNSF2;
     OMX_BOOL AlgoSharpening;
     OMX_BOOL AlgoThreeLinColorMap;
     OMX_BOOL AlgoGIC;
-
-    OMX_TI_CONFIG_GAMMATABLE_TYPE mGammaTable;
 
 };
 
@@ -276,13 +274,12 @@ enum E3ASettingsFlags
     SetMeteringAreas        = 1 << 18,
     SetManualExposure       = 1 << 19,
 
-    SetAlgoExternalGamma    = 1 << 20,
+    SetAlgoFixedGamma       = 1 << 20,
     SetAlgoNSF1             = 1 << 21,
     SetAlgoNSF2             = 1 << 22,
     SetAlgoSharpening       = 1 << 23,
     SetAlgoThreeLinColorMap = 1 << 24,
     SetAlgoGIC              = 1 << 25,
-    SetGammaTable           = 1 << 26,
 
 
     E3aSettingMax,

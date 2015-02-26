@@ -50,7 +50,7 @@ static int camera_get_number_of_cameras(void);
 static int camera_get_camera_info(int camera_id, struct camera_info *info);
 
 static struct hw_module_methods_t camera_module_methods = {
-        open: camera_device_open
+        .open = camera_device_open
 };
 
 } // namespace Camera
@@ -58,19 +58,23 @@ static struct hw_module_methods_t camera_module_methods = {
 
 
 camera_module_t HAL_MODULE_INFO_SYM = {
-    common: {
-         tag: HARDWARE_MODULE_TAG,
-         version_major: 1,
-         version_minor: 0,
-         id: CAMERA_HARDWARE_MODULE_ID,
-         name: "TI OMAP CameraHal Module",
-         author: "TI",
-         methods: &Ti::Camera::camera_module_methods,
-         dso: NULL, /* remove compilation warnings */
-         reserved: {0}, /* remove compilation warnings */
+    .common = {
+         .tag = HARDWARE_MODULE_TAG,
+         .version_major = 1,
+         .version_minor = 0,
+         .id = CAMERA_HARDWARE_MODULE_ID,
+         .name = "TI OMAP CameraHal Module",
+         .author = "TI",
+         .methods = &Ti::Camera::camera_module_methods,
+         .dso = NULL, /* remove compilation warnings */
+         .reserved = {0}, /* remove compilation warnings */
     },
-    get_number_of_cameras: Ti::Camera::camera_get_number_of_cameras,
-    get_camera_info: Ti::Camera::camera_get_camera_info,
+    .get_number_of_cameras = Ti::Camera::camera_get_number_of_cameras,
+    .get_camera_info = Ti::Camera::camera_get_camera_info,
+    .set_callbacks = NULL, /* remove compilation warnings */
+    .get_vendor_tag_ops = NULL, /* remove compilation warnings */
+    .open_legacy = NULL, /* remove compilation warnings */
+    .reserved = {0}, /* remove compilation warnings */
 };
 
 
@@ -137,25 +141,6 @@ int camera_set_buffer_source(struct camera_device * device,
     ti_dev = (ti_camera_device_t*) device;
 
     rv = gCameraHals[ti_dev->cameraid]->setBufferSource(tapin, tapout);
-
-    return rv;
-}
-
-int camera_release_buffer_source(struct camera_device * device,
-                                 struct preview_stream_ops *tapin,
-                                 struct preview_stream_ops *tapout)
-{
-    CAMHAL_LOG_MODULE_FUNCTION_NAME;
-
-    int rv = -EINVAL;
-    ti_camera_device_t* ti_dev = NULL;
-
-    if(!device)
-        return rv;
-
-    ti_dev = (ti_camera_device_t*) device;
-
-    rv = gCameraHals[ti_dev->cameraid]->releaseBufferSource(tapin, tapout);
 
     return rv;
 }
@@ -524,17 +509,19 @@ int camera_send_command(struct camera_device * device,
 
     ti_dev = (ti_camera_device_t*) device;
 
-#ifdef OMAP_ENHANCEMENT_CPCAM
+#ifdef OMAP_ENHANCEMENT
     if ( cmd == CAMERA_CMD_SETUP_EXTENDED_OPERATIONS ) {
         camera_device_extended_ops_t * const ops = static_cast<camera_device_extended_ops_t*>(
                 camera_cmd_send_command_args_to_pointer(arg1, arg2));
 
+#ifdef OMAP_ENHANCEMENT_CPCAM
         ops->set_extended_preview_ops = camera_set_extended_preview_ops;
         ops->set_buffer_source = camera_set_buffer_source;
-        ops->release_buffer_source = camera_release_buffer_source;
         ops->take_picture_with_parameters = camera_take_picture_with_parameters;
         ops->reprocess = camera_reprocess;
         ops->cancel_reprocess = camera_cancel_reprocess;
+#endif
+
         return OK;
     }
 #endif
@@ -765,7 +752,7 @@ int camera_get_number_of_cameras(void)
     if(gCameraProperties.initialize() != NO_ERROR)
     {
         CAMHAL_LOGEA("Unable to create or initialize CameraProperties");
-        return NULL;
+        return 0;
     }
 
     num_cameras = gCameraProperties.camerasSupported();
@@ -805,11 +792,7 @@ int camera_get_camera_info(int camera_id, struct camera_info *info)
         {
             if (strcmp(valstr, TICameraParameters::FACING_FRONT) == 0)
             {
-#ifndef TREAT_FRONT_AS_BACK
                 face_value = CAMERA_FACING_FRONT;
-#else
-                face_value = CAMERA_FACING_BACK;
-#endif
             }
             else if (strcmp(valstr, TICameraParameters::FACING_BACK) == 0)
             {
