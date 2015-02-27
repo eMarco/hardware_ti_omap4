@@ -407,6 +407,7 @@ void OMXCameraAdapter::performCleanupAfterError()
     ///De-init the OMX
     OMX_Deinit();
     mComponentState = OMX_StateInvalid;
+    mOmxInitialized = false;
 }
 
 OMXCameraAdapter::OMXCameraPortParameters *OMXCameraAdapter::getPortParams(CameraFrame::FrameType frameType)
@@ -2230,8 +2231,15 @@ status_t OMXCameraAdapter::startPreview()
     // Enable all preview mode extra data.
     if ( OMX_ErrorNone == eError) {
         ret |= setExtraData(true, mCameraAdapterParameters.mPrevPortIndex, OMX_AncillaryData);
+#ifdef OMAP_ENHANCEMENT_CPCAM
 #ifndef OMAP_TUNA
         ret |= setExtraData(true, OMX_ALL, OMX_TI_VectShotInfo);
+#endif
+#endif
+#ifdef CAMERAHAL_OMX_PROFILING
+        if ( UNLIKELY( mDebugProfile ) ) {
+            ret |= setExtraData(true, OMX_ALL, OMX_TI_ProfilerData);
+        }
 #endif
     }
 
@@ -2310,7 +2318,10 @@ status_t OMXCameraAdapter::startPreview()
             }
         mFramesWithDucati++;
 #ifdef CAMERAHAL_DEBUG
-        mBuffersWithDucati.add((int)mPreviewData->mBufferHeader[index]->pAppPrivate,1);
+        {
+        android::AutoMutex locker(mBuffersWithDucatiLock);
+        mBuffersWithDucati.add((int)mPreviewData->mBufferHeader[index]->pBuffer,1);
+        }
 #endif
         GOTO_EXIT_IF((eError!=OMX_ErrorNone), eError);
         }
@@ -2750,7 +2761,7 @@ status_t OMXCameraAdapter::takePicture()
 
     LOG_FUNCTION_NAME;
 
-    {
+    if (mNextState != REPROCESS_STATE) {
         android::AutoMutex lock(mFrameCountMutex);
         if (mFrameCount < 1) {
             // first frame may time some time to come...so wait for an adequate amount of time
@@ -3395,8 +3406,7 @@ status_t OMXCameraAdapter::storeProfilingData(OMX_BUFFERHEADERTYPE* pBuffHeader)
     if ( UNLIKELY( mDebugProfile ) ) {
 
         platformPrivate =  static_cast<OMX_TI_PLATFORMPRIVATE *> (pBuffHeader->pPlatformPrivate);
-        extraData = getExtradata(static_cast<OMX_OTHER_EXTRADATATYPE *> (platformPrivate->pMetaDataBuffer),
-                platformPrivate->nMetaDataSize,
+        extraData = getExtradata(platformPrivate,
                 static_cast<OMX_EXTRADATATYPE> (OMX_TI_ProfilerData));
 
         if ( NULL != extraData ) {
@@ -3552,12 +3562,15 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
         mFramesWithDucati--;
 
 #ifdef CAMERAHAL_DEBUG
+        {
+        android::AutoMutex locker(mBuffersWithDucatiLock);
         if(mBuffersWithDucati.indexOfKey((uint32_t)pBuffHeader->pBuffer)<0)
             {
             CAMHAL_LOGE("Buffer was never with Ducati!! %p", pBuffHeader->pBuffer);
             for(unsigned int i=0;i<mBuffersWithDucati.size();i++) CAMHAL_LOGSV("0x%x", mBuffersWithDucati.keyAt(i));
             }
         mBuffersWithDucati.removeItem((int)pBuffHeader->pBuffer);
+        }
 #endif
 
         if(mDebugFcs)
@@ -4051,9 +4064,6 @@ status_t OMXCameraAdapter::setExtraData(bool enable, OMX_U32 nPortIndex, OMX_EXT
 
     extraDataControl.nPortIndex = nPortIndex;
     extraDataControl.eExtraDataType = eType;
-#ifdef OMAP_TUNA
-//    extraDataControl.eCameraView = OMX_2D;
-#endif
 
     if (enable) {
         extraDataControl.bEnable = OMX_TRUE;
@@ -4075,7 +4085,7 @@ OMX_OTHER_EXTRADATATYPE *OMXCameraAdapter::getExtradata(const OMX_PTR ptrPrivate
     if ( NULL != ptrPrivate ) {
         const OMX_TI_PLATFORMPRIVATE *platformPrivate = (const OMX_TI_PLATFORMPRIVATE *) ptrPrivate;
 
-        CAMHAL_LOGSVB("Size = %d, sizeof = %d, pAuxBuf = 0x%x, pAuxBufSize= %d, pMetaDataBufer = 0x%x, nMetaDataSize = %d",
+        CAMHAL_LOGVB("Size = %d, sizeof = %d, pAuxBuf = 0x%x, pAuxBufSize= %d, pMetaDataBufer = 0x%x, nMetaDataSize = %d",
                       platformPrivate->nSize,
                       sizeof(OMX_TI_PLATFORMPRIVATE),
                       platformPrivate->pAuxBuf1,

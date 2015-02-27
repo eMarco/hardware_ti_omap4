@@ -636,6 +636,9 @@ public:
     //additional methods used for memory mapping
     virtual uint32_t * getOffsets() = 0;
     virtual int getFd() = 0;
+    virtual CameraBuffer * getBuffers(bool reset = false) { return NULL; }
+    virtual unsigned int getSize() {return 0; }
+    virtual int getBufferCount() {return -1; }
 
     virtual int freeBufferList(CameraBuffer * buf) = 0;
 
@@ -768,6 +771,8 @@ private:
     void copyAndSendPreviewFrame(CameraFrame* frame, int32_t msgType);
     size_t calculateBufferSize(size_t width, size_t height, const char *pixelFormat);
     const char* getContstantForPixelFormat(const char *pixelFormat);
+    void lockBufferAndUpdatePtrs(CameraFrame* frame);
+    void unlockBufferAndUpdatePtrs(CameraFrame* frame);
 
 private:
     mutable android::Mutex mLock;
@@ -1054,9 +1059,7 @@ public:
 
     // Get min buffers display needs at any given time
     virtual status_t minUndequeueableBuffers(int& unqueueable) = 0;
-protected:
-    virtual const char* getPixFormatConstant(const char* parameters_format) const;
-    virtual size_t getBufSize(const char* parameters_format, int width, int height) const;
+    virtual bool match(const char * str) { return false; }
 
 private:
 #ifdef OMAP_ENHANCEMENT_CPCAM
