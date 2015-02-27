@@ -347,7 +347,7 @@ void BaseCameraAdapter::returnFrame(CameraBuffer * frameBuf, CameraFrame::FrameT
         {
         android::AutoMutex lock(mReturnFrameLock);
 
-        refCount = getFrameRefCount(frameBuf,  frameType);
+        refCount = getFrameRefCountByType(frameBuf, frameType);
 
         if(frameType == CameraFrame::PREVIEW_FRAME_SYNC)
             {
@@ -362,17 +362,11 @@ void BaseCameraAdapter::returnFrame(CameraBuffer * frameBuf, CameraFrame::FrameT
             {
 
             refCount--;
-            setFrameRefCount(frameBuf, frameType, refCount);
+            setFrameRefCountByType(frameBuf, frameType, refCount);
 
-
-            if ( mRecording && (CameraFrame::VIDEO_FRAME_SYNC == frameType) ) {
-                refCount += getFrameRefCount(frameBuf, CameraFrame::PREVIEW_FRAME_SYNC);
-            } else if ( mRecording && (CameraFrame::PREVIEW_FRAME_SYNC == frameType) ) {
-                refCount += getFrameRefCount(frameBuf, CameraFrame::VIDEO_FRAME_SYNC);
-            } else if ( mRecording && (CameraFrame::SNAPSHOT_FRAME == frameType) ) {
-                refCount += getFrameRefCount(frameBuf, CameraFrame::VIDEO_FRAME_SYNC);
+            if (mRecording) {
+                refCount += getFrameRefCount(frameBuf);
             }
-
 
             }
         else
@@ -390,6 +384,8 @@ void BaseCameraAdapter::returnFrame(CameraBuffer * frameBuf, CameraFrame::FrameT
         if ( 0 == refCount )
             {
 #ifdef CAMERAHAL_DEBUG
+            {
+            android::AutoMutex locker(mBuffersWithDucatiLock);
             if((mBuffersWithDucati.indexOfKey((int)camera_buffer_get_omx_ptr(frameBuf)) >= 0) &&
                ((CameraFrame::PREVIEW_FRAME_SYNC == frameType) ||
                  (CameraFrame::SNAPSHOT_FRAME == frameType)))
@@ -398,6 +394,7 @@ void BaseCameraAdapter::returnFrame(CameraBuffer * frameBuf, CameraFrame::FrameT
                 for(unsigned int i=0;i<mBuffersWithDucati.size();i++) CAMHAL_LOGSV("0x%x", mBuffersWithDucati.keyAt(i));
                 }
             mBuffersWithDucati.add((int)camera_buffer_get_omx_ptr(frameBuf),1);
+            }
 #endif
             res = fillThisBuffer(frameBuf, frameType);
             }
@@ -541,17 +538,6 @@ status_t BaseCameraAdapter::sendCommand(CameraCommands operation, int value1, in
                     android::AutoMutex lock(mCaptureBufferLock);
                     mCaptureBuffers = desc->mBuffers;
                     mCaptureBuffersLength = desc->mLength;
-                    mCaptureBuffersAvailable.clear();
-                    for ( uint32_t i = 0 ; i < desc->mMaxQueueable ; i++ )
-                        {
-                        mCaptureBuffersAvailable.add(&mCaptureBuffers[i], 0);
-                        }
-                    // initial ref count for undeqeueued buffers is 1 since buffer provider
-                    // is still holding on to it
-                    for ( uint32_t i = desc->mMaxQueueable ; i < desc->mCount ; i++ )
-                        {
-                        mCaptureBuffersAvailable.add(&mCaptureBuffers[i], 1);
-                        }
                     }
 
                 if ( NULL != desc )
@@ -1387,7 +1373,7 @@ status_t BaseCameraAdapter::__sendFrameToSubscribers(CameraFrame* frame,
       }
 
     if (NULL != subscribers) {
-        refCount = getFrameRefCount(frame->mBuffer, frameType);
+        refCount = getFrameRefCountByType(frame->mBuffer, frameType);
 
         if (refCount == 0) {
             CAMHAL_LOGDA("Invalid ref count of 0");
@@ -1441,37 +1427,37 @@ int BaseCameraAdapter::setInitFrameRefCount(CameraBuffer * buf, unsigned int mas
 
       case CameraFrame::IMAGE_FRAME:
         {
-          setFrameRefCount(buf, CameraFrame::IMAGE_FRAME, (int) mImageSubscribers.size());
+            setFrameRefCountByType(buf, CameraFrame::IMAGE_FRAME, (int) mImageSubscribers.size());
         }
         break;
       case CameraFrame::RAW_FRAME:
         {
-          setFrameRefCount(buf, CameraFrame::RAW_FRAME, mRawSubscribers.size());
+            setFrameRefCountByType(buf, CameraFrame::RAW_FRAME, mRawSubscribers.size());
         }
         break;
       case CameraFrame::PREVIEW_FRAME_SYNC:
         {
-          setFrameRefCount(buf, CameraFrame::PREVIEW_FRAME_SYNC, mFrameSubscribers.size());
+            setFrameRefCountByType(buf, CameraFrame::PREVIEW_FRAME_SYNC, mFrameSubscribers.size());
         }
         break;
       case CameraFrame::SNAPSHOT_FRAME:
         {
-          setFrameRefCount(buf, CameraFrame::SNAPSHOT_FRAME, mSnapshotSubscribers.size());
+            setFrameRefCountByType(buf, CameraFrame::SNAPSHOT_FRAME, mSnapshotSubscribers.size());
         }
         break;
       case CameraFrame::VIDEO_FRAME_SYNC:
         {
-          setFrameRefCount(buf,CameraFrame::VIDEO_FRAME_SYNC, mVideoSubscribers.size());
+            setFrameRefCountByType(buf,CameraFrame::VIDEO_FRAME_SYNC, mVideoSubscribers.size());
         }
         break;
       case CameraFrame::FRAME_DATA_SYNC:
         {
-          setFrameRefCount(buf, CameraFrame::FRAME_DATA_SYNC, mFrameDataSubscribers.size());
+            setFrameRefCountByType(buf, CameraFrame::FRAME_DATA_SYNC, mFrameDataSubscribers.size());
         }
         break;
       case CameraFrame::REPROCESS_INPUT_FRAME:
         {
-          setFrameRefCount(buf,CameraFrame::REPROCESS_INPUT_FRAME, mVideoInSubscribers.size());
+            setFrameRefCountByType(buf,CameraFrame::REPROCESS_INPUT_FRAME, mVideoInSubscribers.size());
         }
         break;
       default:
@@ -1485,60 +1471,90 @@ int BaseCameraAdapter::setInitFrameRefCount(CameraBuffer * buf, unsigned int mas
   return ret;
 }
 
-int BaseCameraAdapter::getFrameRefCount(CameraBuffer * frameBuf, CameraFrame::FrameType frameType)
+int BaseCameraAdapter::getFrameRefCount(CameraBuffer * frameBuf)
+{
+    int res = 0, refCnt = 0;
+
+    for (unsigned int frameType = 1; frameType < CameraFrame::ALL_FRAMES; frameType <<= 1) {
+        refCnt = getFrameRefCountByType(frameBuf, static_cast<CameraFrame::FrameType>(frameType));
+        if (refCnt > 0) res += refCnt;
+    }
+    return res;
+}
+
+int BaseCameraAdapter::getFrameRefCountByType(CameraBuffer * frameBuf, CameraFrame::FrameType frameType)
 {
     int res = -1;
+    ssize_t index = NAME_NOT_FOUND;
 
     LOG_FUNCTION_NAME;
 
-    switch ( frameType )
-        {
+    switch (frameType) {
         case CameraFrame::IMAGE_FRAME:
         case CameraFrame::RAW_FRAME:
-                {
-                android::AutoMutex lock(mCaptureBufferLock);
-                res = mCaptureBuffersAvailable.valueFor(frameBuf );
-                }
+        {
+            android::AutoMutex lock(mCaptureBufferLock);
+            index = mCaptureBuffersAvailable.indexOfKey(frameBuf);
+            if (index != NAME_NOT_FOUND) {
+                res = mCaptureBuffersAvailable[index];
+            }
             break;
-        case CameraFrame::SNAPSHOT_FRAME:
-                {
-                android::AutoMutex lock(mSnapshotBufferLock);
-                res = mSnapshotBuffersAvailable.valueFor( ( unsigned int ) frameBuf );
-                }
-            break;
-        case CameraFrame::PREVIEW_FRAME_SYNC:
-                {
-                android::AutoMutex lock(mPreviewBufferLock);
-                res = mPreviewBuffersAvailable.valueFor(frameBuf );
-                }
-            break;
-        case CameraFrame::FRAME_DATA_SYNC:
-                {
-                android::AutoMutex lock(mPreviewDataBufferLock);
-                res = mPreviewDataBuffersAvailable.valueFor(frameBuf );
-                }
-            break;
-        case CameraFrame::VIDEO_FRAME_SYNC:
-                {
-                android::AutoMutex lock(mVideoBufferLock);
-                res = mVideoBuffersAvailable.valueFor(frameBuf );
-                }
-            break;
-        case CameraFrame::REPROCESS_INPUT_FRAME: {
-            android::AutoMutex lock(mVideoInBufferLock);
-            res = mVideoInBuffersAvailable.valueFor(frameBuf );
         }
+        case CameraFrame::SNAPSHOT_FRAME:
+        {
+            android::AutoMutex lock(mSnapshotBufferLock);
+            index = mSnapshotBuffersAvailable.indexOfKey(frameBuf);
+            if (index != NAME_NOT_FOUND) {
+                res = mSnapshotBuffersAvailable[index];
+            }
             break;
+        }
+        case CameraFrame::PREVIEW_FRAME_SYNC:
+        {
+            android::AutoMutex lock(mPreviewBufferLock);
+            index = mPreviewBuffersAvailable.indexOfKey(frameBuf);
+            if (index != NAME_NOT_FOUND) {
+                res = mPreviewBuffersAvailable[index];
+            }
+            break;
+        }
+        case CameraFrame::FRAME_DATA_SYNC:
+        {
+            android::AutoMutex lock(mPreviewDataBufferLock);
+            index = mPreviewDataBuffersAvailable.indexOfKey(frameBuf);
+            if (index != NAME_NOT_FOUND) {
+                res = mPreviewDataBuffersAvailable[index];
+            }
+            break;
+        }
+        case CameraFrame::VIDEO_FRAME_SYNC:
+        {
+            android::AutoMutex lock(mVideoBufferLock);
+            index = mVideoBuffersAvailable.indexOfKey(frameBuf);
+            if (index != NAME_NOT_FOUND) {
+                res = mVideoBuffersAvailable[index];
+            }
+            break;
+        }
+        case CameraFrame::REPROCESS_INPUT_FRAME:
+        {
+            android::AutoMutex lock(mVideoInBufferLock);
+            index = mVideoInBuffersAvailable.indexOfKey(frameBuf);
+            if (index != NAME_NOT_FOUND) {
+                res = mVideoInBuffersAvailable[index];
+            }
+            break;
+        }
         default:
             break;
-        };
+    }
 
     LOG_FUNCTION_NAME_EXIT;
 
     return res;
 }
 
-void BaseCameraAdapter::setFrameRefCount(CameraBuffer * frameBuf, CameraFrame::FrameType frameType, int refCount)
+void BaseCameraAdapter::setFrameRefCountByType(CameraBuffer * frameBuf, CameraFrame::FrameType frameType, int refCount)
 {
 
     LOG_FUNCTION_NAME;
@@ -1555,7 +1571,7 @@ void BaseCameraAdapter::setFrameRefCount(CameraBuffer * frameBuf, CameraFrame::F
         case CameraFrame::SNAPSHOT_FRAME:
                 {
                 android::AutoMutex lock(mSnapshotBufferLock);
-                mSnapshotBuffersAvailable.replaceValueFor(  ( unsigned int ) frameBuf, refCount);
+                mSnapshotBuffersAvailable.replaceValueFor(frameBuf, refCount);
                 }
             break;
         case CameraFrame::PREVIEW_FRAME_SYNC:
@@ -1607,6 +1623,8 @@ status_t BaseCameraAdapter::startVideoCapture()
     if ( NO_ERROR == ret )
         {
 
+        mVideoBuffersAvailable.clear();
+
         for ( unsigned int i = 0 ; i < mPreviewBuffersAvailable.size() ; i++ )
             {
             mVideoBuffersAvailable.add(mPreviewBuffersAvailable.keyAt(i), 0);
@@ -1636,13 +1654,11 @@ status_t BaseCameraAdapter::stopVideoCapture()
         for ( unsigned int i = 0 ; i < mVideoBuffersAvailable.size() ; i++ )
             {
             CameraBuffer *frameBuf = mVideoBuffersAvailable.keyAt(i);
-            if( getFrameRefCount(frameBuf,  CameraFrame::VIDEO_FRAME_SYNC) > 0)
+            if( getFrameRefCountByType(frameBuf,  CameraFrame::VIDEO_FRAME_SYNC) > 0)
                 {
                 returnFrame(frameBuf, CameraFrame::VIDEO_FRAME_SYNC);
                 }
             }
-
-        mVideoBuffersAvailable.clear();
 
         mRecording = false;
         }
@@ -1907,7 +1923,6 @@ status_t BaseCameraAdapter::setState(CameraCommands operation)
 
                 //These events don't change the current state
                 case CAMERA_QUERY_RESOLUTION_PREVIEW:
-                case CAMERA_QUERY_BUFFER_SIZE_IMAGE_CAPTURE:
                 case CAMERA_QUERY_BUFFER_SIZE_PREVIEW_DATA:
                     CAMHAL_LOGDB("Adapter state switch INTIALIZED_STATE->INTIALIZED_STATE event  = %s",
                             printState);
@@ -2119,6 +2134,7 @@ status_t BaseCameraAdapter::setState(CameraCommands operation)
                     mNextState = PREVIEW_STATE;
                     break;
 
+                case CAMERA_QUERY_BUFFER_SIZE_IMAGE_CAPTURE:
                 case CAMERA_START_IMAGE_CAPTURE:
                      CAMHAL_LOGDB("Adapter state switch CAPTURE_STATE->CAPTURE_STATE event = %s",
                                  printState);
@@ -2182,10 +2198,22 @@ status_t BaseCameraAdapter::setState(CameraCommands operation)
                     mNextState = PREVIEW_STATE;
                     break;
 
+                case CAMERA_START_IMAGE_CAPTURE:
+                    CAMHAL_LOGDB("Adapter state switch AF_STATE->CAPTURE_STATE event = 0x%x",
+                                 operation);
+                    mNextState = CAPTURE_STATE;
+                    break;
+
                 case CAMERA_START_SMOOTH_ZOOM:
                     CAMHAL_LOGDB("Adapter state switch AF_STATE->AF_ZOOM_STATE event = %s",
                             printState);
                     mNextState = AF_ZOOM_STATE;
+                    break;
+
+                case CAMERA_START_VIDEO:
+                    CAMHAL_LOGDB("Adapter state switch AF_STATE->VIDEO_STATE event = %s",
+                            printState);
+                    mNextState = VIDEO_STATE;
                     break;
 
                 default:
@@ -2291,6 +2319,19 @@ status_t BaseCameraAdapter::setState(CameraCommands operation)
                     CAMHAL_LOGDB("Adapter state switch VIDEO_AF_STATE->VIDEO_STATE event = %s",
                             printState);
                     mNextState = VIDEO_STATE;
+                    break;
+
+                case CAMERA_USE_BUFFERS_IMAGE_CAPTURE:
+                    CAMHAL_LOGDB("Adapter state switch VIDEO_AF_STATE->VIDEO_LOADED_CAPTURE_STATE event = %s",
+                            printState);
+                    mNextState = VIDEO_LOADED_CAPTURE_STATE;
+                    break;
+
+                //This event doesn't change the current state
+                case CAMERA_QUERY_BUFFER_SIZE_IMAGE_CAPTURE:
+                    CAMHAL_LOGDB("Adapter state switch VIDEO_AF_STATE->VIDEO_AF_STATE event = %s",
+                            printState);
+                    mNextState = VIDEO_AF_STATE;
                     break;
 
                 default:
@@ -2427,13 +2468,23 @@ status_t BaseCameraAdapter::setState(CameraCommands operation)
                                  printState);
                     mNextState = PREVIEW_STATE;
                     break;
+                case CAMERA_QUERY_BUFFER_SIZE_IMAGE_CAPTURE:
                 case CAMERA_START_IMAGE_CAPTURE:
-                case CAMERA_USE_BUFFERS_REPROCESS:
                      CAMHAL_LOGDB("Adapter state switch REPROCESS_STATE->REPROCESS_STATE event = %s",
                                  printState);
                     mNextState = REPROCESS_STATE;
                     break;
+                case CAMERA_USE_BUFFERS_REPROCESS:
+                     CAMHAL_LOGDB("Adapter state switch REPROCESS_STATE->REPROCESS_STATE event = %s",
+                                 printState);
+                    mNextState = LOADED_REPROCESS_STATE;
+                    break;
 
+                case CAMERA_USE_BUFFERS_IMAGE_CAPTURE:
+                    CAMHAL_LOGDB("Adapter state switch REPROCESS_STATE->LOADED_CAPTURE_STATE event = %s",
+                            printState);
+                    mNextState = LOADED_CAPTURE_STATE;
+                    break;
                 default:
                     CAMHAL_LOGEB("Adapter state switch REPROCESS_STATE Invalid Op! event = %s",
                                  printState);

@@ -210,10 +210,8 @@ const userToOMX_LUT OMXCameraAdapter::mFrameLayout [] = {
    { TICameraParameters::S3D_NONE,          OMX_TI_StereoFrameLayout2D },
    { TICameraParameters::S3D_TB_FULL,       OMX_TI_StereoFrameLayoutTopBottom },
    { TICameraParameters::S3D_SS_FULL,       OMX_TI_StereoFrameLayoutLeftRight },
-#ifndef OMAP_TUNA
    { TICameraParameters::S3D_TB_SUBSAMPLED, OMX_TI_StereoFrameLayoutTopBottomSubsample },
    { TICameraParameters::S3D_SS_SUBSAMPLED, OMX_TI_StereoFrameLayoutLeftRightSubsample },
-#endif
 };
 
 const LUTtype OMXCameraAdapter::mLayoutLUT = {

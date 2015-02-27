@@ -255,7 +255,6 @@ static OMX_ERRORTYPE ComponentPrivateEmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	OMX_BUFFERHEADERTYPE * pBufferHdr)
 {
 	OMX_ERRORTYPE eError = OMX_ErrorNone;
-
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	PROXY_COMPONENT_PRIVATE *pCompPrv;
 	PROXY_assert(hComponent != NULL, OMX_ErrorInsufficientResources,"Null component handle received in EmptyThisBuffer");
@@ -272,8 +271,8 @@ static OMX_ERRORTYPE ComponentPrivateEmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	        }
 		nMetadataBufferType = *pTempBuffer;
 		if(nMetadataBufferType == kMetadataBufferTypeCameraSource) {
-    eError = OMX_ConfigureDynamicFrameRate(hComponent, pBufferHdr);
-    if( eError != OMX_ErrorNone)
+			eError = OMX_ConfigureDynamicFrameRate(hComponent, pBufferHdr);
+			if( eError != OMX_ErrorNone)
 				DOMX_ERROR(" Error while configuring FrameRate Dynamically.Error  info = %d - Non Fatal Error",eError);
 		}
 	}
@@ -882,7 +881,7 @@ OMX_ERRORTYPE LOCAL_PROXY_H264E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
 	if (pProxy->bAndroidOpaqueFormat
 #ifdef ENABLE_GRALLOC_BUFFER
-&& pGrallocHandle != NULL && pGrallocHandle->iFormat != HAL_PIXEL_FORMAT_TI_NV12 
+&& pGrallocHandle != NULL && pGrallocHandle->iFormat != HAL_PIXEL_FORMAT_TI_NV12
 #endif
 )
 	{
@@ -897,10 +896,10 @@ EXIT:
 	if( pBufferHdr!=NULL && pCompPrv!=NULL)
 	{
 		if(pCompPrv->proxyPortBuffers[pBufferHdr->nInputPortIndex].proxyBufferType == EncoderMetadataPointers)
-	{
-		pBufferHdr->pBuffer = pBufferOrig;
-		pBufferHdr->nFilledLen = nFilledLen;
-		pBufferHdr->nAllocLen = nAllocLen;
+		{
+		   pBufferHdr->pBuffer = pBufferOrig;
+		   pBufferHdr->nFilledLen = nFilledLen;
+		   pBufferHdr->nAllocLen = nAllocLen;
 #ifdef ENABLE_GRALLOC_BUFFER
                    RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf0, pAuxBuf1, GrallocPointers);
 #endif

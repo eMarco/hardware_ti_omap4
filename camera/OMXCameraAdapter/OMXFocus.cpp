@@ -177,7 +177,8 @@ status_t OMXCameraAdapter::doAutoFocus()
         // force AF, Ducati will take care of whether CAF
         // or AF will be performed, depending on light conditions
         if ( focusControl.eFocusControl == OMX_IMAGE_FocusControlAuto &&
-             ( focusStatus.eFocusStatus == OMX_FocusStatusUnableToReach ||
+             ( focusStatus.eFocusStatus == OMX_FocusStatusRequest ||
+               focusStatus.eFocusStatus == OMX_FocusStatusUnableToReach ||
                focusStatus.eFocusStatus == OMX_FocusStatusLost ) ) {
             focusControl.eFocusControl = OMX_IMAGE_FocusControlAutoLock;
         }
@@ -714,17 +715,11 @@ status_t OMXCameraAdapter::setTouchFocus()
 
     OMX_ALGOAREASTYPE *focusAreas;
     OMX_TI_CONFIG_SHAREDBUFFER sharedBuffer;
-    MemoryManager memMgr;
     CameraBuffer *bufferlist;
     int areasSize = 0;
 
     LOG_FUNCTION_NAME;
 
-    ret = memMgr.initialize();
-    if ( ret != OK ) {
-        CAMHAL_LOGE("MemoryManager initialization failed, error: %d", ret);
-        return ret;
-    }
 
     if ( OMX_StateInvalid == mComponentState )
         {
@@ -736,7 +731,7 @@ status_t OMXCameraAdapter::setTouchFocus()
         {
 
         areasSize = ((sizeof(OMX_ALGOAREASTYPE)+4095)/4096)*4096;
-        bufferlist = memMgr.allocateBufferList(0, 0, NULL, areasSize, 1);
+        bufferlist = mMemMgr.allocateBufferList(0, 0, NULL, areasSize, 1);
         focusAreas = (OMX_ALGOAREASTYPE*) bufferlist[0].opaque;
 
         OMXCameraPortParameters * mPreviewData = NULL;
@@ -822,7 +817,7 @@ status_t OMXCameraAdapter::setTouchFocus()
     EXIT:
         if (NULL != bufferlist)
             {
-            memMgr.freeBufferList (bufferlist);
+            mMemMgr.freeBufferList (bufferlist);
             }
         }
 
@@ -835,8 +830,16 @@ void OMXCameraAdapter::handleFocusCallback() {
     OMX_PARAM_FOCUSSTATUSTYPE eFocusStatus;
     CameraHalEvent::FocusStatus focusStatus = CameraHalEvent::FOCUS_STATUS_FAIL;
     status_t ret = NO_ERROR;
-    BaseCameraAdapter::AdapterState nextState;
+    BaseCameraAdapter::AdapterState nextState, currentState;
     BaseCameraAdapter::getNextState(nextState);
+    BaseCameraAdapter::getState(currentState);
+
+    // Dropping AF callback if it triggered in non AF state
+    if ((currentState != AF_STATE) && (currentState != AF_ZOOM_STATE) &&
+        (currentState != VIDEO_AF_STATE) && (nextState != VIDEO_AF_STATE) &&
+        (nextState != AF_STATE) && (nextState != AF_ZOOM_STATE)) {
+        return;
+    }
 
     OMX_INIT_STRUCT(eFocusStatus, OMX_PARAM_FOCUSSTATUSTYPE);
 

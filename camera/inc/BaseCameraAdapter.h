@@ -246,7 +246,7 @@ protected:
     mutable android::Mutex mPreviewBufferLock;
 
     //Snapshot buffer management data
-    android::KeyedVector<int, int> mSnapshotBuffersAvailable;
+    android::KeyedVector<CameraBuffer *, int> mSnapshotBuffersAvailable;
     mutable android::Mutex mSnapshotBufferLock;
 
     //Video buffer management data
@@ -292,6 +292,7 @@ protected:
     uint32_t mFramesWithEncoder;
 
 #ifdef CAMERAHAL_DEBUG
+    android::Mutex mBuffersWithDucatiLock;
     android::KeyedVector<int, bool> mBuffersWithDucati;
 #endif
 

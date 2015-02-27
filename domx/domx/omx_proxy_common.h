@@ -151,6 +151,7 @@ extern "C"
         MEMPLUGIN_bufferinfo.bMap   = OMX_FALSE;\
         MEMPLUGIN_bufferinfo.eTiler_format = -1;\
 } while(0)
+
 	typedef OMX_ERRORTYPE(*PROXY_EMPTYBUFFER_DONE) (OMX_HANDLETYPE
 	    hComponent, OMX_U32 remoteBufHdr, OMX_U32 nfilledLen,
 	    OMX_U32 nOffset, OMX_U32 nFlags);
@@ -231,7 +232,7 @@ extern "C"
 		OMX_U32 frame_width;
 		OMX_U32 frame_height;
 		OMX_U32 frame_xoffset;
-		OMX_U32	frame_yoffset;
+		OMX_U32 frame_yoffset;
 		OMX_U32 decoded_height;
 		OMX_U32 stride;
 		OMX_S32 runningFrame;

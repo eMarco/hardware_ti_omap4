@@ -94,7 +94,6 @@ OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
 
 	eError = OMX_ProxyViddecInit(hComponent);
 	pHandle->ComponentDeInit = PROXY_VIDDEC_Secure_ComponentDeInit;
-
 	pComponentPrivate->bMapBuffers = OMX_FALSE;
 	EXIT:
 	    if (eError != OMX_ErrorNone)

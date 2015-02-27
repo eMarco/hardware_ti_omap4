@@ -251,7 +251,6 @@ static OMX_ERRORTYPE ComponentPrivateEmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	OMX_BUFFERHEADERTYPE * pBufferHdr)
 {
 	OMX_ERRORTYPE eError = OMX_ErrorNone;
-
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	PROXY_COMPONENT_PRIVATE *pCompPrv;
 	PROXY_assert(hComponent != NULL, OMX_ErrorInsufficientResources,"Null component handle received in EmptyThisBuffer");
@@ -268,12 +267,11 @@ static OMX_ERRORTYPE ComponentPrivateEmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	        }
 		nMetadataBufferType = *pTempBuffer;
 		if(nMetadataBufferType == kMetadataBufferTypeCameraSource) {
-    eError = OMX_ConfigureDynamicFrameRate(hComponent, pBufferHdr);
-    if( eError != OMX_ErrorNone)
+			eError = OMX_ConfigureDynamicFrameRate(hComponent, pBufferHdr);
+			if( eError != OMX_ErrorNone)
 				DOMX_ERROR(" Error while configuring FrameRate Dynamically.Error  info = %d - Non Fatal Error",eError);
 		}
 	}
-
     DOMX_DEBUG("Redirection from ComponentPricateEmptyThisBuffer to PROXY_EmptyThisBuffer");
 EXIT:
         if( eError != OMX_ErrorNone) {
@@ -281,7 +279,7 @@ EXIT:
         } else {
                DOMX_EXIT("%s: dynamic frame rate config successful",__FUNCTION__);
         }
-    return LOCAL_PROXY_MPEG4E_EmptyThisBuffer (hComponent,pBufferHdr);
+    return LOCAL_PROXY_MPEG4E_EmptyThisBuffer(hComponent,pBufferHdr);
 }
 
 OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
@@ -733,7 +731,7 @@ OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_EmptyThisBuffer(OMX_HANDLETYPE hComponent,
 	nAllocLen = pBufferHdr->nAllocLen;
         if(nFilledLen != 0)
         {
-        	pBufferHdr->nFilledLen = tParamStruct.nBufferSize;
+		pBufferHdr->nFilledLen = tParamStruct.nBufferSize;
         }
 	pBufferHdr->nAllocLen =  tParamStruct.nBufferSize;
 
@@ -854,15 +852,15 @@ EXIT:
 	    {
 		    if(pCompPrv->proxyPortBuffers[pBufferHdr->nInputPortIndex].proxyBufferType == EncoderMetadataPointers)
 		    {
-		pBufferHdr->pBuffer = pBufferOrig;
+		       pBufferHdr->pBuffer = pBufferOrig;
 		       pBufferHdr->nFilledLen = nFilledLen;
 		       pBufferHdr->nAllocLen = nAllocLen;
 #ifdef ENABLE_GRALLOC_BUFFER
                RPC_UnRegisterBuffer(pCompPrv->hRemoteComp, pAuxBuf0, pAuxBuf1, GrallocPointers);
 #endif
-	}
+	        }
 	    }
-		return eError;
+	return eError;
 }
 
 #ifdef ANDROID_CUSTOM_OPAQUECOLORFORMAT
@@ -895,7 +893,7 @@ static OMX_ERRORTYPE LOCAL_PROXY_MPEG4E_AllocateBuffer(OMX_HANDLETYPE hComponent
 		tParamRect.nPortIndex = nPortIndex;
 
 		eError = PROXY_GetParameter(hComponent, (OMX_INDEXTYPE)OMX_TI_IndexParam2DBufferAllocDimension, &tParamRect);
- 		PROXY_assert(eError == OMX_ErrorNone, eError," Error in Proxy GetParameter from 2d index in allocate buffer");
+		PROXY_assert(eError == OMX_ErrorNone, eError," Error in Proxy GetParameter from 2d index in allocate buffer");
 
 		err = pProxy->mAllocDev->alloc(pProxy->mAllocDev,(int) tParamRect.nWidth,(int) tParamRect.nHeight,
 			(int) HAL_PIXEL_FORMAT_TI_NV12,(int) GRALLOC_USAGE_HW_RENDER,

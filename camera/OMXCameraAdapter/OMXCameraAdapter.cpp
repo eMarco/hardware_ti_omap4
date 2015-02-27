@@ -81,6 +81,13 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
     mPending3Asettings = 0;//E3AsettingsAll;
     mPendingCaptureSettings = 0;
     mPendingPreviewSettings = 0;
+    mPendingReprocessSettings = 0;
+
+    ret = mMemMgr.initialize();
+    if ( ret != OK ) {
+        CAMHAL_LOGE("MemoryManager initialization failed, error: %d", ret);
+        return ret;
+    }
 
     if ( 0 != mInitSem.Count() )
         {
@@ -214,8 +221,6 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
     mVstabEnabled = false;
     mVnfEnabled = false;
     mBurstFrames = 1;
-    mBurstFramesAccum = 0;
-    mCapturedFrames = 0;
     mFlushShotConfigQueue = false;
     mPictureQuality = 100;
     mCurrentZoomIdx = 0;
@@ -255,6 +260,9 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
     mEXIFData.mModelValid = false;
     mEXIFData.mMakeValid = false;
 
+    mCapturedFrames = 0;
+    mBurstFramesAccum = 0;
+    mBurstFramesQueued = 0;
     //update the mDeviceOrientation with the sensor mount orientation.
     //So that the face detect will work before onOrientationEvent()
     //get triggered.
@@ -2501,6 +2509,7 @@ status_t OMXCameraAdapter::stopPreview() {
 
     mFirstTimeInit = true;
     mPendingCaptureSettings = 0;
+    mPendingReprocessSettings = 0;
     mFramesWithDucati = 0;
     mFramesWithDisplay = 0;
     mFramesWithEncoder = 0;
@@ -4185,10 +4194,10 @@ OMXCameraAdapter::~OMXCameraAdapter()
 
     android::AutoMutex lock(gAdapterLock);
 
-    if ( mOmxInitialized ) {
         // return to OMX Loaded state
         switchToLoaded();
 
+    if ( mOmxInitialized ) {
 #ifndef OMAP_TUNA
         saveDccFileDataSave();
 

@@ -118,11 +118,8 @@ typedef enum OMX_TI_INDEXTYPE {
     OMX_IndexConfigExtCaptureMode,                      /**< 0x7F000022 reference: OMX_CONFIG_EXTCAPTUREMODETYPE */
     OMX_IndexConfigExtPrepareCapturing,                 /**< 0x7F000023 reference: OMX_CONFIG_BOOLEANTYPE */
     OMX_IndexConfigExtCapturing,                        /**< 0x7F000024 reference: OMX_CONFIG_EXTCAPTURING */
-
     OMX_IndexCameraOperatingMode,                       /**< 0x7F000025 reference: OMX_CONFIG_CAMOPERATINGMODETYPE */
-#ifndef OMAP_TUNA
     OMX_IndexParamCameraOperatingMode = OMX_IndexCameraOperatingMode, /**< 0x7F000025 reference: OMX_CONFIG_CAMOPERATINGMODETYPE */
-#endif
     OMX_IndexConfigDigitalFlash,                        /**< 0x7F000026 reference: OMX_CONFIG_BOOLEANTYPE */
     OMX_IndexConfigPrivacyIndicator,                    /**< 0x7F000027 reference: OMX_CONFIG_BOOLEANTYPE */
     OMX_IndexConfigTorchMode,                           /**< 0x7F000028 reference: OMX_CONFIG_TORCHMODETYPE */
