@@ -68,12 +68,15 @@ TI_CAMERAHAL_COMMON_INCLUDES := \
     external/jpeg \
     external/jhead \
     $(LOCAL_PATH)/../libtiutils \
-    $(LOCAL_PATH)/inc \
-    frameworks/native/include/media/hardware \
-    system/media/camera/include \
-    $(DOMX_PATH)/mm_osal/inc \
-    $(DOMX_PATH)/omx_core/inc \
-    frameworks/native/include/media/openmax
+    $(LOCAL_PATH)/inc
+
+ifdef ANDROID_API_JB_OR_LATER
+TI_CAMERAHAL_COMMON_INCLUDES += \
+    frameworks/native/include/media/hardware
+else
+TI_CAMERAHAL_COMMON_INCLUDES += \
+    frameworks/base/include/media/stagefright
+endif
 
 TI_CAMERAHAL_COMMON_SRC := \
     CameraHal_Module.cpp \

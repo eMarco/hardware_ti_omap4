@@ -213,10 +213,11 @@ public:
         {
         INITIAL_MODE = -1,
         HIGH_SPEED = 1,
-        HIGH_QUALITY = 2,
-        VIDEO_MODE = 3,
-        HIGH_QUALITY_ZSL = 4,
-        CP_CAM = 5,
+        HIGH_QUALITY,
+        VIDEO_MODE,
+        HIGH_QUALITY_ZSL,
+        CP_CAM,
+        VIDEO_MODE_HQ,
         };
 
     enum IPPMode
@@ -934,6 +935,9 @@ private:
     static const int SENSORID_OV14825;
     static const int SENSORID_S5K4E1GA;
     static const int SENSORID_S5K6A1GX03;
+    static const int SENSORID_OV8830;
+    static const int SENSORID_OV2722;
+    static const int SENSORID_OV9726;
     static const CapU32 mFacing [];
     static const userToOMX_LUT mAutoConvergence [];
     static const LUTtype mAutoConvergenceLUT;

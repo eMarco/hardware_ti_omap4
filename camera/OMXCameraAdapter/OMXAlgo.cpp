@@ -64,6 +64,9 @@ status_t OMXCameraAdapter::setParametersAlgo(const android::CameraParameters &pa
         } else if (strcmp(valstr, (const char *) TICameraParameters::VIDEO_MODE) == 0) {
             capMode = OMXCameraAdapter::VIDEO_MODE;
             mCapabilitiesOpMode = MODE_VIDEO;
+        } else if (strcmp(valstr, (const char *) TICameraParameters::VIDEO_MODE_HQ) == 0) {
+              capMode = OMXCameraAdapter::VIDEO_MODE_HQ;
+              mCapabilitiesOpMode = MODE_VIDEO_HIGH_QUALITY;
         } else if (strcmp(valstr, (const char *) TICameraParameters::CP_CAM_MODE) == 0) {
             capMode = OMXCameraAdapter::CP_CAM;
             mCapabilitiesOpMode = MODE_CPCAM;
@@ -226,7 +229,6 @@ status_t OMXCameraAdapter::setParametersAlgo(const android::CameraParameters &pa
         }
 
 #ifdef OMAP_ENHANCEMENT
-
     //Set Auto Convergence Mode
     valstr = params.get((const char *) TICameraParameters::KEY_AUTOCONVERGENCE_MODE);
     valManualStr = params.get(TICameraParameters::KEY_MANUAL_CONVERGENCE);
@@ -251,7 +253,6 @@ status_t OMXCameraAdapter::setParametersAlgo(const android::CameraParameters &pa
             CAMHAL_LOGDB("Mechanical Misalignment Correction %s", valstr);
         }
     }
-
 #endif
 
     LOG_FUNCTION_NAME_EXIT;
@@ -650,8 +651,7 @@ status_t OMXCameraAdapter::setCaptureMode(OMXCameraAdapter::CaptureMode mode)
         {
 
         OMX_INIT_STRUCT_PTR (&camMode, OMX_CONFIG_CAMOPERATINGMODETYPE);
-        if ( mSensorIndex == OMX_TI_StereoSensor )
-            {
+        if ( mSensorIndex == OMX_TI_StereoSensor ) {
 #ifndef OMAP_TUNA
             if ( OMXCameraAdapter::VIDEO_MODE == mode ) {
                 CAMHAL_LOGDA("Camera mode: STEREO VIDEO");
@@ -663,28 +663,20 @@ status_t OMXCameraAdapter::setCaptureMode(OMXCameraAdapter::CaptureMode mode)
 #ifndef OMAP_TUNA
             }
 #endif
-            }
-        else if ( OMXCameraAdapter::HIGH_SPEED == mode )
-            {
+        } else if ( OMXCameraAdapter::HIGH_SPEED == mode ) {
             CAMHAL_LOGDA("Camera mode: HIGH SPEED");
             camMode.eCamOperatingMode = OMX_CaptureImageHighSpeedTemporalBracketing;
-            }
-        else if ( OMXCameraAdapter::CP_CAM == mode )
-            {
+        } else if ( OMXCameraAdapter::CP_CAM == mode ) {
             CAMHAL_LOGDA("Camera mode: CP CAM");
 #ifndef OMAP_TUNA
             camMode.eCamOperatingMode = OMX_TI_CPCam;
             // TODO(XXX): Hardcode for now until we implement re-proc pipe
             singlePrevMode.eMode = OMX_TI_SinglePreviewMode_ImageCaptureHighSpeed;
 #endif
-            }
-        else if( OMXCameraAdapter::HIGH_QUALITY == mode )
-            {
+        } else if( OMXCameraAdapter::HIGH_QUALITY == mode ) {
             CAMHAL_LOGDA("Camera mode: HIGH QUALITY");
             camMode.eCamOperatingMode = OMX_CaptureImageProfileBase;
-            }
-        else if( OMXCameraAdapter::HIGH_QUALITY_ZSL== mode )
-            {
+        } else if( OMXCameraAdapter::HIGH_QUALITY_ZSL== mode ) {
             const char* valstr = NULL;
             CAMHAL_LOGDA("Camera mode: HIGH QUALITY_ZSL");
             camMode.eCamOperatingMode = OMX_TI_CaptureImageProfileZeroShutterLag;
@@ -695,17 +687,16 @@ status_t OMXCameraAdapter::setCaptureMode(OMXCameraAdapter::CaptureMode mode)
             }
 #endif
 
-            }
-        else if( OMXCameraAdapter::VIDEO_MODE == mode )
-            {
+        } else if( OMXCameraAdapter::VIDEO_MODE == mode ) {
             CAMHAL_LOGDA("Camera mode: VIDEO MODE");
             camMode.eCamOperatingMode = OMX_CaptureVideo;
-            }
-        else
-            {
+        } else if( OMXCameraAdapter::VIDEO_MODE_HQ == mode ) {
+            CAMHAL_LOGDA("Camera mode: VIDEO MODE HQ");
+            camMode.eCamOperatingMode = OMX_CaptureHighQualityVideo;
+        } else {
             CAMHAL_LOGEA("Camera mode: INVALID mode passed!");
             return BAD_VALUE;
-            }
+        }
 
         if( NO_ERROR == ret )
             {
@@ -736,6 +727,7 @@ status_t OMXCameraAdapter::setCaptureMode(OMXCameraAdapter::CaptureMode mode)
                 CAMHAL_LOGDA("single preview mode configured successfully");
             }
         }
+
 #endif
 
         if( NO_ERROR == ret )
@@ -1226,7 +1218,7 @@ status_t OMXCameraAdapter::setVFramerate(OMX_U32 minFrameRate, OMX_U32 maxFrameR
     }
 
     return ret;
-}
+ }
 
 #ifndef OMAP_TUNA
 status_t OMXCameraAdapter::setMechanicalMisalignmentCorrection(const bool enable)

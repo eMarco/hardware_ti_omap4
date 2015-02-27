@@ -511,7 +511,7 @@ static OMX_ERRORTYPE CameraSetParam(OMX_IN OMX_HANDLETYPE
     OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *)hComponent;
 
     pCompPrv = (PROXY_COMPONENT_PRIVATE *)hComp->pComponentPrivate;
-    //fprintf(stdout, "DOMX: CameraSetParam: called!!!\n");
+
     switch (nParamIndex)
     {
 	case OMX_TI_IndexParamComponentBufferAllocation:

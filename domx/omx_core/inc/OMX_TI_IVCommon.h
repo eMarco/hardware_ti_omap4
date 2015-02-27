@@ -1021,6 +1021,52 @@ typedef enum OMX_TI_CAMERAVIEWTYPE {
     OMX_TI_CAMERAVIEWTYPE_32BIT_PATCH = 0x7FFFFFFF
 } OMX_TI_CAMERAVIEWTYPE;
 
+/**
+ *  nSize is the size of the structure including the length of data field containing
+ *  the Histogram Matched for Stereo Gamma data.
+ *  nItems is the number of items in the Gamma table.
+ *  data[1] first byte of the Gamma data
+ */
+typedef struct OMX_HMSGAMMATYPE {
+    OMX_U32 nSize;                          /**< The size of the structure
+                                                 including the length of data field containing the gamma data */
+    OMX_VERSIONTYPE       nVersion;
+    OMX_U32               nPortIndex;
+    OMX_TI_CAMERAVIEWTYPE eCameraView;
+    OMX_U32               nItems;            /**< The number of items in Gamma */
+    OMX_U8                data[1];
+} OMX_HMSGAMMATYPE;
+
+/**
+ *  Structure describes properties of pyramid level
+ *  nOffset : nOffset from start of buffer in bytes
+ *  nWidth  : nWidth  in pixels
+ *  nHeight : nHeight in pixels
+ *  nStride : nStride in bytes
+ */
+typedef struct OMX_TI_IMAGEPYRAMIDDESCTYPE {
+    OMX_U32     nOffset;
+    OMX_U16     nWidth;
+    OMX_U16     nHeight;
+    OMX_U32     nStride;
+} OMX_TI_IMAGEPYRAMIDDESCTYPE;
+
+/**
+ *  The extra data having pyramid data,
+ *  It is described with the following structure.
+ *  nLevelsCount - Number of levels of pyramid
+ *  PyramidData - first element of array with description
+ *  of levels of pyramid. Size of array will describe
+ *  by nLevelsCount.
+ */
+typedef struct OMX_TI_IMAGEPYRAMIDTYPE {
+    OMX_U32                     nSize;
+    OMX_VERSIONTYPE             nVersion;
+    OMX_U32                     nPortIndex;
+    OMX_TI_CAMERAVIEWTYPE       eCameraView;
+    OMX_U32                     nLevelsCount;
+    OMX_TI_IMAGEPYRAMIDDESCTYPE PyramidData[1];
+} OMX_TI_IMAGEPYRAMIDTYPE;
 #define OMX_OTHER_EXTRADATATYPE_SIZE ((OMX_U32)(((OMX_OTHER_EXTRADATATYPE *)0x0)->data))  /**< Size of OMX_OTHER_EXTRADATATYPE
                                                                                 without Data[1] and without padding */
 
@@ -1133,26 +1179,6 @@ typedef struct OMX_TI_LSCTABLETYPE {
     OMX_U32 nHeight;
     OMX_U8 pGainTable[OMX_TI_LSC_GAIN_TABLE_SIZE];
 } OMX_TI_LSCTABLETYPE;
-
-/**
- *  nSize is the size of the structure including the length of data field containing
- *  the histogram data.
- *  nBins is the number of bins in the histogram.
- *  eComponentType specifies the type of the histogram bins according to enum.
- *  It can be selected to generate multiple component types, then the extradata struct
- *  is repeated for each component type.
- *  data[1] first byte of the histogram data
- */
-typedef struct OMX_HISTOGRAMTYPE {
-    OMX_U32 nSize;
-    OMX_VERSIONTYPE nVersion;
-    OMX_U32 nPortIndex;
-    OMX_TI_CAMERAVIEWTYPE eCameraView;
-    OMX_U32 nBins;
-    OMX_HISTCOMPONENTTYPE eComponentType;
-    OMX_U8  data[1];
-} OMX_HISTOGRAMTYPE;
-
 
 /**
  * The extra data having ancillary data is described with the following structure.
@@ -1967,22 +1993,6 @@ typedef struct OMX_TI_PARAM_DCCURIINFO {
 } OMX_TI_PARAM_DCCURIINFO;
 
 /**
- * Structure used to configure DCC buffer
- *
- * STRUCT MEMBERS:
- * nSize            : Size of the structure in bytes
- * nVersion         : OMX specification version information
- * nDCCURIBuffSize  : Size of the pDCCURIBuff in bytes
- * pDCCURIBuff      : Pointer to a buffer
- */
-typedef struct OMX_TI_PARAM_DCCURIBUFFER {
-    OMX_U32 nSize;
-    OMX_VERSIONTYPE nVersion;
-    OMX_U32 nDCCURIBuffSize;
-    OMX_U8 *pDCCURIBuff;
-} OMX_TI_PARAM_DCCURIBUFFER;
-
-/**
  * Manual White Balance color temperature
  * STRUCT MEMBERS:
  *  nSize        : Size of the structure in bytes
@@ -2154,6 +2164,10 @@ typedef enum OMX_TI_COLOR_FORMATTYPE {
 	    (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused + 1,
 	OMX_TI_COLOR_FormatRawBayer10bitStereo =
 	    OMX_COLOR_FormatVendorStartUnused + 2, /**< 10 bit raw for stereo */
+/*	OMX_TI_COLOR_FormatYUV420PackedSemiPlanar =
+            (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused  + 0x100, *//* 0x100 is used since it is the corresponding HAL pixel fromat */
+/*        OMX_COLOR_FormatAndroidOpaque =
+	    (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused  + 0x789 *//**< Platform specified opaque format set to unique value 0x789*/
 } OMX_TI_COLOR_FORMATTYPE;
 
 /**

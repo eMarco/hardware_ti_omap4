@@ -49,6 +49,10 @@ const int OMXCameraAdapter::SENSORID_OV5640 = 302;
 const int OMXCameraAdapter::SENSORID_OV14825 = 304;
 const int OMXCameraAdapter::SENSORID_S5K4E1GA = 305;
 const int OMXCameraAdapter::SENSORID_S5K6A1GX03 = 306;
+const int OMXCameraAdapter::SENSORID_OV8830 = 310;
+const int OMXCameraAdapter::SENSORID_OV2722 = 311;
+const int OMXCameraAdapter::SENSORID_OV9726 = 312;
+
 
 const int OMXCameraAdapter::FPS_MIN = 5;
 const int OMXCameraAdapter::FPS_MAX = 30;
@@ -70,15 +74,24 @@ const CapResolution OMXCameraAdapter::mImageCapRes [] = {
     { 2592, 1944, "2592x1944" },
     { 2592, 1728, "2592x1728" },
     { 2592, 1458, "2592x1458" },
+    { 2400, 1350, "2400x1350" },
     { 2304, 1296, "2304x1296" },
     { 2240, 1344, "2240x1344" },
     { 2160, 1440, "2160x1440" },
     { 2112, 1728, "2112x1728" },
+    { 2112, 1188, "2112x1188" },
     { 2048, 1536, "2048x1536" },
     { 2016, 1512, "2016x1512" },
+    { 2016, 1134, "2016x1134" },
     { 2000, 1600, "2000x1600" },
+    { 1920, 1080, "1920x1080" },
     { 1600, 1200, "1600x1200" },
+    { 1600,  900, "1600x900" },
+    { 1536,  864, "1536x864" },
+    { 1408,  792, "1408x792" },
+    { 1344,  756, "1344x756" },
     { 1280, 1024, "1280x1024" },
+    { 1280,  720, "1280x720" },
     { 1152,  864, "1152x864" },
     { 1280,  960, "1280x960" },
     { 1024,  768, "1024x768" },
@@ -95,6 +108,7 @@ const CapResolution OMXCameraAdapter::mImageCapResSS [] = {
    { 2048*2, 1536, "4096x1536" },
    { 1600*2, 1200, "3200x1200" },
    { 1280*2,  960, "2560x960" },
+   { 1280*2,  720, "2560x720" },
    { 1024*2,  768, "2048x768" },
    {  640*2,  480, "1280x480" },
    {  320*2,  240, "640x240" },
@@ -108,6 +122,7 @@ const CapResolution OMXCameraAdapter::mImageCapResTB [] = {
    { 2048, 1536*2, "2048x3072" },
    { 1600, 1200*2, "1600x2400" },
    { 1280,  960*2, "1280x1920" },
+   { 1280,  720*2, "1280x1440" },
    { 1024,  768*2, "1024x1536" },
    {  640,  480*2, "640x960" },
    {  320,  240*2, "320x480" },
@@ -317,7 +332,10 @@ const CapU32 OMXCameraAdapter::mSensorNames [] = {
     { SENSORID_OV5640, "OV5640" },
     { SENSORID_OV14825, "OV14825"},
     { SENSORID_S5K4E1GA, "S5K4E1GA"},
-    { SENSORID_S5K6A1GX03, "S5K6A1GX03" }
+    { SENSORID_S5K6A1GX03, "S5K6A1GX03" },
+    { SENSORID_OV8830, "OV8830" },
+    { SENSORID_OV2722, "OV2722" },
+    { SENSORID_OV9726, "OV9726" }
     // TODO(XXX): need to account for S3D camera later
 };
 
@@ -354,7 +372,6 @@ const CapU32 OMXCameraAdapter::mFacing [] = {
     { OMX_TI_SENFACING_FRONT, TICameraParameters::FACING_FRONT},
 #endif
 };
-
 /*****************************************
  * internal static function declarations
  *****************************************/
@@ -778,7 +795,7 @@ status_t OMXCameraAdapter::insertPreviewSizes(CameraProperties::Properties* para
             CAMHAL_LOGEB("Error inserting supported Landscape preview sizes 0x%x", ret);
             return ret;
         }
-
+        
 #ifndef OMAP_TUNA
         /* Insert Portait Resolutions by verifying Potrait Capability Support */
         ret = encodeSizeCap(caps.tRotatedPreviewResRange,
@@ -1052,10 +1069,17 @@ status_t OMXCameraAdapter::insertFramerates(CameraProperties::Properties* params
     {
         android::Vector<FpsRange> fpsRanges;
 
-        const int minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE,
-                androidFromDucatiFrameRate(caps.xFramerateMin));
-        const int maxFrameRate = min<int>(FPS_MAX * CameraHal::VFR_SCALE,
-                androidFromDucatiFrameRate(caps.xFramerateMax));
+	// HASH: Fix JEM Amazon Ducati xFramerates which are [1 .. 30] vs [256 .. 7680]
+        int minFrameRate = -1;
+	if (caps.xFramerateMin >= 50)
+		minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMin));
+	else
+		minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMin << 8));
+        int maxFrameRate = -1;
+	if (caps.xFramerateMax >= 50)
+		maxFrameRate = min<int>(FPS_MAX * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMax));
+	else
+		maxFrameRate = min<int>(FPS_MAX * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMax << 8));
 
         if ( minFrameRate > maxFrameRate ) {
             CAMHAL_LOGE("Invalid frame rate range: [%d .. %d]", caps.xFramerateMin, caps.xFramerateMax);
@@ -1116,10 +1140,17 @@ status_t OMXCameraAdapter::insertFramerates(CameraProperties::Properties* params
     {
         android::Vector<FpsRange> fpsRanges;
 
-        const int minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE,
-                androidFromDucatiFrameRate(caps.xFramerateMin));
-        const int maxFrameRate = min<int>(FPS_MAX_EXTENDED * CameraHal::VFR_SCALE,
-                androidFromDucatiFrameRate(caps.xFramerateMax));
+	// HASH: Fix JEM Amazon Ducati xFramerates which are [1 .. 30] vs [256 .. 7680]
+        int minFrameRate = -1;
+	if (caps.xFramerateMin >= 50)
+		minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMin));
+	else
+		minFrameRate = max<int>(FPS_MIN * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMin << 8));
+        int maxFrameRate = -1;
+	if (caps.xFramerateMax >= 50)
+		maxFrameRate = min<int>(FPS_MAX_EXTENDED * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMax));
+	else
+		maxFrameRate = min<int>(FPS_MAX_EXTENDED * CameraHal::VFR_SCALE, androidFromDucatiFrameRate(caps.xFramerateMax << 8));
 
         encodeFrameRates(minFrameRate, maxFrameRate, caps, mFramerates, ARRAY_SIZE(mFramerates), fpsRanges);
 
@@ -1725,6 +1756,7 @@ status_t OMXCameraAdapter::insertAutoConvergenceModes(CameraProperties::Properti
     LOG_FUNCTION_NAME;
 
     memset(supported, '\0', sizeof(supported));
+
 #ifndef OMAP_TUNA
     for ( unsigned int i = 0 ; i < caps.ulAutoConvModesCount; i++ ) {
         p = getLUTvalue_OMXtoHAL(caps.eAutoConvModes[i], mAutoConvergenceLUT);
@@ -1814,6 +1846,10 @@ status_t OMXCameraAdapter::insertCaptureModes(CameraProperties::Properties* para
 #ifdef OMAP_ENHANCEMENT_CPCAM
         strncat(supported, PARAM_SEP, REMAINING_BYTES(supported));
         strncat(supported, TICameraParameters::CP_CAM_MODE, REMAINING_BYTES(supported));
+#endif
+#ifdef  CAMERAHAL_OMAP5_CAPTURE_MODES
+        strncat(supported, PARAM_SEP, REMAINING_BYTES(supported));
+        strncat(supported, TICameraParameters::VIDEO_MODE_HQ, REMAINING_BYTES(supported));
 #endif
         strncat(supported, PARAM_SEP, REMAINING_BYTES(supported));
         strncat(supported, TICameraParameters::ZOOM_BRACKETING, REMAINING_BYTES(supported));

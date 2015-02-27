@@ -213,6 +213,10 @@ typedef enum OMX_TI_INDEXTYPE {
     OMX_TI_IndexParamVtcSlice,
     OMX_TI_IndexConfigAutofocusEnable,             /**< reference: OMX_CONFIG_BOOLEANTYPE */
     OMX_TI_IndexComponentHandle,                        /**< 0x7F0000** reference: OMX_TI_COMPONENT_HANDLE */
+#ifndef OMAP_TUNA
+    OMX_TI_IndexConfigAFScore,                          /**< 0x7F000095 reference: OMX_CONFIG_AUTOFOCUSSCORE */
+#endif
+    OMX_TI_IndexParamComponentBufferAllocation,         /**< 0x7F00009F reference: OMX_TI_PARAM_COMPONENTBUFALLOCTYPE */
     OMX_TI_IndexParamComponentExpectedSuspensionState,  /**< 0x7F0000** reference: OMX_PARAM_SUSPENSIONTYPE */
     OMX_TI_IndexUseBufferDescriptor                    /**< 0x7F0000** reference: OMX_TI_PARAM_USEBUFFERDESCRIPTOR */
 } OMX_TI_INDEXTYPE;
