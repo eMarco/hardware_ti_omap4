@@ -230,13 +230,16 @@ const char TICameraParameters::KEY_MECHANICAL_MISALIGNMENT_CORRECTION[] = "mecha
 
 #ifndef OMAP_TUNA
 //TI extensions for enable/disable algos
-const char TICameraParameters::KEY_ALGO_FIXED_GAMMA[] = TI_KEY_ALGO_PREFIX "fixed-gamma";
+const char TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA[] = TI_KEY_ALGO_PREFIX "external-gamma";
 const char TICameraParameters::KEY_ALGO_NSF1[] = TI_KEY_ALGO_PREFIX "nsf1";
 const char TICameraParameters::KEY_ALGO_NSF2[] = TI_KEY_ALGO_PREFIX "nsf2";
 const char TICameraParameters::KEY_ALGO_SHARPENING[] = TI_KEY_ALGO_PREFIX "sharpening";
 const char TICameraParameters::KEY_ALGO_THREELINCOLORMAP[] = TI_KEY_ALGO_PREFIX "threelinecolormap";
 const char TICameraParameters::KEY_ALGO_GIC[] = TI_KEY_ALGO_PREFIX "gic";
+
+const char TICameraParameters::KEY_GAMMA_TABLE[] = "gamma-table";
 #endif
+const char TICameraParameters::KEY_PREVIEW_FRAME_RATE_RANGE[] = "preview-frame-rate-range";
 
 } // namespace Camera
 } // namespace Ti

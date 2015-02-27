@@ -254,13 +254,18 @@ static const char KEY_MECHANICAL_MISALIGNMENT_CORRECTION[];
 
 #ifndef OMAP_TUNA
 //TI extensions for enable/disable algos
-static const char KEY_ALGO_FIXED_GAMMA[];
+static const char KEY_ALGO_EXTERNAL_GAMMA[];
 static const char KEY_ALGO_NSF1[];
 static const char KEY_ALGO_NSF2[];
 static const char KEY_ALGO_SHARPENING[];
 static const char KEY_ALGO_THREELINCOLORMAP[];
 static const char KEY_ALGO_GIC[];
 #endif
+
+//Gamma table
+static const char KEY_GAMMA_TABLE[];
+
+static const char KEY_PREVIEW_FRAME_RATE_RANGE[];
 
 };
 

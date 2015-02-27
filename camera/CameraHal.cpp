@@ -383,7 +383,6 @@ int CameraHal::setParameters(const android::CameraParameters& params)
 
     int w, h;
     int framerate;
-    int maxFPS, minFPS;
     const char *valstr = NULL;
     int varint = 0;
     status_t ret = NO_ERROR;
@@ -433,15 +432,10 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 // make sure we support vstab...if we don't and application is trying to set
                 // vstab then return an error
                 if (strcmp(mCameraProperties->get(CameraProperties::VSTAB_SUPPORTED),
-                           android::CameraParameters::TRUE) == 0) {
-                    CAMHAL_LOGDB("VSTAB %s", valstr);
-                    mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION, valstr);
-                } else if (strcmp(valstr, android::CameraParameters::TRUE) == 0) {
+                           android::CameraParameters::TRUE) != 0 &&
+                    strcmp(valstr, android::CameraParameters::TRUE) == 0) {
                     CAMHAL_LOGEB("ERROR: Invalid VSTAB: %s", valstr);
                     return BAD_VALUE;
-                } else {
-                    mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION,
-                                    android::CameraParameters::FALSE);
                 }
             }
 
@@ -470,15 +464,6 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 updateRequired = true;
             }
 
-            if ((valstr = params.get(TICameraParameters::KEY_IPP)) != NULL) {
-                if (isParameterValid(valstr,mCameraProperties->get(CameraProperties::SUPPORTED_IPP_MODES))) {
-                    CAMHAL_LOGDB("IPP mode set %s", valstr);
-                    mParameters.set(TICameraParameters::KEY_IPP, valstr);
-                } else {
-                    CAMHAL_LOGEB("ERROR: Invalid IPP mode: %s", valstr);
-                    return BAD_VALUE;
-                }
-            }
 
 #ifdef OMAP_ENHANCEMENT_VTC
             if ((valstr = params.get(TICameraParameters::KEY_VTC_HINT)) != NULL ) {
@@ -503,6 +488,19 @@ int CameraHal::setParameters(const android::CameraParameters& params)
 #endif
             }
 
+        if ((valstr = params.get(TICameraParameters::KEY_IPP)) != NULL) {
+            if (isParameterValid(valstr,mCameraProperties->get(CameraProperties::SUPPORTED_IPP_MODES))) {
+                if ((mParameters.get(TICameraParameters::KEY_IPP) == NULL) ||
+                        (strcmp(valstr, mParameters.get(TICameraParameters::KEY_IPP)))) {
+                    CAMHAL_LOGDB("IPP mode set %s", params.get(TICameraParameters::KEY_IPP));
+                    mParameters.set(TICameraParameters::KEY_IPP, valstr);
+                    restartPreviewRequired = true;
+                }
+            } else {
+                CAMHAL_LOGEB("ERROR: Invalid IPP mode: %s", valstr);
+                return BAD_VALUE;
+            }
+        }
 #ifndef OMAP_TUNA
         if ( (valstr = params.get(TICameraParameters::KEY_S3D_PRV_FRAME_LAYOUT)) != NULL )
             {
@@ -551,18 +549,6 @@ int CameraHal::setParameters(const android::CameraParameters& params)
             if(strcmp(valstr, android::CameraParameters::TRUE) == 0)
                 {
                 CAMHAL_LOGVB("Video Resolution: %d x %d", mVideoWidth, mVideoHeight);
-#ifdef OMAP_ENHANCEMENT_VTC
-                if (!mVTCUseCase)
-#endif
-                {
-                    int maxFPS, minFPS;
-
-                    params.getPreviewFpsRange(&minFPS, &maxFPS);
-                    maxFPS /= CameraHal::VFR_SCALE;
-                    if ( ( maxFPS <= SW_SCALING_FPS_LIMIT ) ) {
-                        getPreferredPreviewRes(&w, &h);
-                    }
-                }
                 mParameters.set(android::CameraParameters::KEY_RECORDING_HINT, valstr);
                 restartPreviewRequired |= setVideoModeParameters(params);
                 }
@@ -697,50 +683,58 @@ int CameraHal::setParameters(const android::CameraParameters& params)
         // be cleared by the client in order for constant FPS to get
         // applied.
         // If Port FPS needs to be used for configuring, then FPS RANGE should not be set by the APP.
-        valstr = params.get(android::CameraParameters::KEY_PREVIEW_FPS_RANGE);
-        if (valstr != NULL && strlen(valstr)) {
-            int curMaxFPS = 0;
-            int curMinFPS = 0;
 
             // APP wants to set FPS range
             // Set framerate = MAXFPS
-            CAMHAL_LOGDA("APP IS CHANGING FRAME RATE RANGE");
 
-            mParameters.getPreviewFpsRange(&curMinFPS, &curMaxFPS);
-            CAMHAL_LOGDB("## current minFPS = %d; maxFPS=%d",curMinFPS, curMaxFPS);
+        int curFramerate = 0;
+        bool frameRangeUpdated = false, fpsUpdated = false;
+        int curMaxFPS = 0, curMinFPS = 0, maxFPS = 0, minFPS = 0;
 
+        mParameters.getPreviewFpsRange(&curMinFPS, &curMaxFPS);
             params.getPreviewFpsRange(&minFPS, &maxFPS);
-            CAMHAL_LOGDB("## requested minFPS = %d; maxFPS=%d",minFPS, maxFPS);
             // Validate VFR
+        curFramerate = mParameters.getPreviewFrameRate();
+        framerate = params.getPreviewFrameRate();
+
+        valstr = params.get(android::CameraParameters::KEY_PREVIEW_FPS_RANGE);
+        if (valstr != NULL && strlen(valstr) &&
+                ((curMaxFPS != maxFPS) || (curMinFPS != minFPS))) {
+            CAMHAL_LOGDB("## current minFPS = %d; maxFPS=%d", curMinFPS, curMaxFPS);
+            CAMHAL_LOGDB("## requested minFPS = %d; maxFPS=%d", minFPS, maxFPS);
             if (!isFpsRangeValid(minFPS, maxFPS, params.get(android::CameraParameters::KEY_SUPPORTED_PREVIEW_FPS_RANGE)) &&
                 !isFpsRangeValid(minFPS, maxFPS, params.get(TICameraParameters::KEY_FRAMERATE_RANGES_EXT_SUPPORTED))) {
-                CAMHAL_LOGEA("Invalid FPS Range");
+                CAMHAL_LOGEA("Trying to set invalid FPS Range (%d,%d)", minFPS, maxFPS);
                 return BAD_VALUE;
-            } else {
-                framerate = maxFPS / CameraHal::VFR_SCALE;
-                mParameters.setPreviewFrameRate(framerate);
-                CAMHAL_LOGDB("SET FRAMERATE %d", framerate);
+            }
                 mParameters.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, valstr);
                 CAMHAL_LOGDB("FPS Range = %s", valstr);
                 if ( curMaxFPS == (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) &&
                      (unsigned int)maxFPS < (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) ) {
                     restartPreviewRequired = true;
                 }
+            frameRangeUpdated = true;
             }
-        } else {
-            framerate = params.getPreviewFrameRate();
+        valstr = params.get(android::CameraParameters::KEY_PREVIEW_FRAME_RATE);
+        if (valstr != NULL && strlen(valstr) && (framerate != curFramerate)) {
+            CAMHAL_LOGD("current framerate = %d reqested framerate = %d", curFramerate, framerate);
             if (!isParameterValid(framerate, params.get(android::CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES)) &&
                 !isParameterValid(framerate, params.get(TICameraParameters::KEY_FRAMERATES_EXT_SUPPORTED))) {
-                CAMHAL_LOGEA("Invalid frame rate");
+                CAMHAL_LOGEA("Trying to set invalid frame rate %d", framerate);
                 return BAD_VALUE;
             }
-            char tmpBuffer[MAX_PROP_VALUE_LENGTH];
-
-            sprintf(tmpBuffer, "%d,%d", framerate * CameraHal::VFR_SCALE, framerate * CameraHal::VFR_SCALE);
             mParameters.setPreviewFrameRate(framerate);
-            CAMHAL_LOGDB("SET FRAMERATE %d", framerate);
-            mParameters.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, tmpBuffer);
-            CAMHAL_LOGDB("FPS Range = %s", tmpBuffer);
+            CAMHAL_LOGDB("Set frame rate %d", framerate);
+            fpsUpdated = true;
+        }
+
+        if (frameRangeUpdated) {
+            mParameters.set(TICameraParameters::KEY_PREVIEW_FRAME_RATE_RANGE,
+                    mParameters.get(android::CameraParameters::KEY_PREVIEW_FPS_RANGE));
+        } else if (fpsUpdated) {
+            char tmpBuffer[MAX_PROP_VALUE_LENGTH];
+            sprintf(tmpBuffer, "%d,%d", framerate * CameraHal::VFR_SCALE, framerate * CameraHal::VFR_SCALE);
+            mParameters.set(TICameraParameters::KEY_PREVIEW_FRAME_RATE_RANGE, tmpBuffer);
         }
 
         if ((valstr = params.get(TICameraParameters::KEY_GBCE)) != NULL) {
@@ -1183,10 +1177,10 @@ int CameraHal::setParameters(const android::CameraParameters& params)
 
 #ifndef OMAP_TUNA
         //TI extensions for enable/disable algos
-        if( (valstr = params.get(TICameraParameters::KEY_ALGO_FIXED_GAMMA)) != NULL )
+        if( (valstr = params.get(TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA)) != NULL )
             {
-            CAMHAL_LOGDB("Fixed Gamma set %s", valstr);
-            mParameters.set(TICameraParameters::KEY_ALGO_FIXED_GAMMA, valstr);
+            CAMHAL_LOGDB("External Gamma set %s", valstr);
+            mParameters.set(TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA, valstr);
             }
 
         if( (valstr = params.get(TICameraParameters::KEY_ALGO_NSF1)) != NULL )
@@ -1217,6 +1211,12 @@ int CameraHal::setParameters(const android::CameraParameters& params)
             {
             CAMHAL_LOGDB("Green Inballance Correction set %s", valstr);
             mParameters.set(TICameraParameters::KEY_ALGO_GIC, valstr);
+            }
+
+        if( (valstr = params.get(TICameraParameters::KEY_GAMMA_TABLE)) != NULL )
+            {
+            CAMHAL_LOGDB("Manual gamma table set %s", valstr);
+            mParameters.set(TICameraParameters::KEY_GAMMA_TABLE, valstr);
             }
 #endif
 
@@ -4566,6 +4566,7 @@ void CameraHal::initDefaultParameters()
     //Insert default values
     p.setPreviewFrameRate(atoi(mCameraProperties->get(CameraProperties::PREVIEW_FRAME_RATE)));
     p.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, mCameraProperties->get(CameraProperties::FRAMERATE_RANGE));
+    p.set(TICameraParameters::KEY_PREVIEW_FRAME_RATE_RANGE, mCameraProperties->get(CameraProperties::FRAMERATE_RANGE));
     p.setPreviewFormat(mCameraProperties->get(CameraProperties::PREVIEW_FORMAT));
     p.setPictureFormat(mCameraProperties->get(CameraProperties::PICTURE_FORMAT));
     p.set(android::CameraParameters::KEY_JPEG_QUALITY, mCameraProperties->get(CameraProperties::JPEG_QUALITY));
@@ -4625,7 +4626,7 @@ void CameraHal::initDefaultParameters()
 #ifndef OMAP_TUNA
     // TI extensions for enable/disable algos
     // Hadcoded for now
-    p.set(TICameraParameters::KEY_ALGO_FIXED_GAMMA, android::CameraParameters::TRUE);
+    p.set(TICameraParameters::KEY_ALGO_EXTERNAL_GAMMA, android::CameraParameters::FALSE);
     p.set(TICameraParameters::KEY_ALGO_NSF1, android::CameraParameters::TRUE);
     p.set(TICameraParameters::KEY_ALGO_NSF2, android::CameraParameters::TRUE);
     p.set(TICameraParameters::KEY_ALGO_SHARPENING, android::CameraParameters::TRUE);
@@ -4733,24 +4734,6 @@ status_t CameraHal::storeMetaDataInBuffers(bool enable)
 void CameraHal::setExternalLocking(bool extBuffLocking)
 {
     mExternalLocking = extBuffLocking;
-}
-
-void CameraHal::getPreferredPreviewRes(int *width, int *height)
-{
-    LOG_FUNCTION_NAME;
-
-    // We request Ducati for a higher resolution so preview looks better and then downscale the frame before the callback.
-    // TODO: This should be moved to configuration constants and boolean flag whether to provide such optimization
-    // Also consider providing this configurability of the desired display resolution from the application
-    if ( ( *width == 320 ) && ( *height == 240 ) ) {
-        *width = 640;
-        *height = 480;
-    } else if ( ( *width == 176 ) && ( *height == 144 ) ) {
-        *width = 704;
-        *height = 576;
-    }
-
-    LOG_FUNCTION_NAME_EXIT;
 }
 
 void CameraHal::resetPreviewRes(android::CameraParameters *params)

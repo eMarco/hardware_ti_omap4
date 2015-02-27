@@ -259,13 +259,12 @@ public:
     enum CaptureSettingsFlags {
         SetFormat               = 1 << 0,
         SetThumb                = 1 << 1,
-        SetExpBracket           = 1 << 2,
+        SetBurstExpBracket      = 1 << 2,
         SetQuality              = 1 << 3,
         SetRotation             = 1 << 4,
-        SetBurst                = 1 << 5,
         ECaptureSettingMax,
         ECapturesettingsAll = ( ((ECaptureSettingMax -1 ) << 1) -1 ), /// all possible flags raised
-        ECaptureParamSettings = SetFormat | SetThumb | SetQuality | SetExpBracket, // Settings set with SetParam
+        ECaptureParamSettings = SetFormat | SetThumb | SetQuality | SetBurstExpBracket, // Settings set with SetParam
         ECaptureConfigSettings = (ECapturesettingsAll & ~ECaptureParamSettings)
     };
 
@@ -581,12 +580,16 @@ private:
     status_t setParameter3ABoolInvert(const OMX_INDEXTYPE omx_idx,
                                       const OMX_BOOL data, const char *msg);
 #ifndef OMAP_TUNA
-    status_t setAlgoFixedGamma(Gen3A_settings& Gen3A);
+    status_t setAlgoExternalGamma(Gen3A_settings& Gen3A);
     status_t setAlgoNSF1(Gen3A_settings& Gen3A);
     status_t setAlgoNSF2(Gen3A_settings& Gen3A);
     status_t setAlgoSharpening(Gen3A_settings& Gen3A);
     status_t setAlgoThreeLinColorMap(Gen3A_settings& Gen3A);
     status_t setAlgoGIC(Gen3A_settings& Gen3A);
+
+    //Gamma table
+    void updateGammaTable(const char* gamma);
+    status_t setGammaTable(Gen3A_settings& Gen3A);
 #endif
 
     status_t getEVCompensation(Gen3A_settings& Gen3A);
@@ -1245,6 +1248,7 @@ private:
     bool mTunnelDestroyed;
     bool mPreviewPortInitialized;
 
+    // Used for allocations that need to be sent to Ducati
     MemoryManager mMemMgr;
 };
 
