@@ -107,6 +107,7 @@
 #define HAL_PIXEL_FORMAT_NV12 0x100
 
 #define OP_STR_SIZE 100
+
 #define NONNEG_ASSIGN(x,y) \
     if(x > -1) \
         y = x
@@ -359,6 +360,7 @@ typedef struct _CameraBuffer {
     int stride;
     int height;
     const char *format;
+
 #if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
 
     struct timeval ppmStamp;
@@ -417,8 +419,8 @@ class CameraFrame
     mFrameMask(0),
     mQuirks(0)
     {
-      mYuv[0] = 0; //NULL;
-      mYuv[1] = 0; //NULL;
+      mYuv[0] = 0; // NULL is meant for pointers
+      mYuv[1] = 0; // NULL is meant for pointers
 
 #ifdef OMAP_ENHANCEMENT_CPCAM
         mMetaData = 0;
@@ -829,6 +831,7 @@ private:
     int mVideoHeight;
 
     bool mExternalLocking;
+
 };
 
 
@@ -1059,6 +1062,8 @@ public:
 
     // Get min buffers display needs at any given time
     virtual status_t minUndequeueableBuffers(int& unqueueable) = 0;
+
+    // Given a vector of DisplayAdapters find the one corresponding to str
     virtual bool match(const char * str) { return false; }
 
 private:
@@ -1090,6 +1095,7 @@ public:
         SocFamily_Omap4470,
         SocFamily_ElementCount    // element count of SocFamily
     };
+
     ///Constants
     static const int NO_BUFFERS_PREVIEW;
     static const int NO_BUFFERS_IMAGE_CAPTURE;
@@ -1159,6 +1165,7 @@ public:
      */
     int setBufferSource(struct preview_stream_ops *tapin, struct preview_stream_ops *tapout);
 #endif
+
     /**
      * Release a tap-in or tap-out point.
      */
@@ -1259,6 +1266,8 @@ public:
 #endif
 
     status_t storeMetaDataInBuffers(bool enable);
+
+    // Use external locking for graphic buffers
     void setExternalLocking(bool extBuffLocking);
 
      //@}
@@ -1302,6 +1311,7 @@ public:
     static void eventCallbackRelay(CameraHalEvent* event);
     void eventCallback(CameraHalEvent* event);
     void setEventProvider(int32_t eventMask, MessageNotifier * eventProvider);
+
     static const char* getPixelFormatConstant(const char* parameters_format);
     static size_t calculateBufferSize(const char* parameters_format, int width, int height);
     static void getXYFromOffset(unsigned int *x, unsigned int *y,
@@ -1416,10 +1426,12 @@ public:
     android::sp<AppCallbackNotifier> mAppCallbackNotifier;
     android::sp<DisplayAdapter> mDisplayAdapter;
     android::sp<MemoryManager> mMemoryManager;
-    // TODO(XXX): May need to keep this as a vector in the future
+
     android::Vector< android::sp<DisplayAdapter> > mOutAdapters;
     android::Vector< android::sp<DisplayAdapter> > mInAdapters;
-    // when we can have multiple tap-in/tap-out points
+
+    // TODO(XXX): Even though we support user setting multiple BufferSourceAdapters now
+    // only one tap in surface and one tap out surface is supported at a time.
     android::sp<DisplayAdapter> mBufferSourceAdapter_In;
     android::sp<DisplayAdapter> mBufferSourceAdapter_Out;
 
@@ -1522,6 +1534,7 @@ private:
     int mVideoHeight;
 
     android::String8 mCapModeBackup;
+
     bool mExternalLocking;
 
     const SocFamily mSocFamily;

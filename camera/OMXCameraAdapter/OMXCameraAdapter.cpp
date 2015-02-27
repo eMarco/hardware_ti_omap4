@@ -387,8 +387,9 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
     mParameters3A.AlgoSharpening = OMX_TRUE;
     mParameters3A.AlgoThreeLinColorMap = OMX_TRUE;
     mParameters3A.AlgoGIC = OMX_TRUE;
+#ifndef OMAP_TUNA
     memset(&mParameters3A.mGammaTable, 0, sizeof(mParameters3A.mGammaTable));
-
+#endif
     LOG_FUNCTION_NAME_EXIT;
     return Utils::ErrorUtils::omxToAndroidError(eError);
 

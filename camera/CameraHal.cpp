@@ -107,6 +107,7 @@ static int dummy_get_current_size(preview_stream_ops_t*,
 }
 #endif
 
+
 CameraHal::SocFamily CameraHal::getSocFamily() {
     static const struct {
         const char *name;
@@ -190,6 +191,7 @@ static void orientation_cb(uint32_t orientation, uint32_t tilt, void* cookie) {
     }
 
 }
+
 /*-------------Camera Hal Interface Method definitions STARTS here--------------------*/
 
 /**
@@ -464,7 +466,6 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 updateRequired = true;
             }
 
-
 #ifdef OMAP_ENHANCEMENT_VTC
             if ((valstr = params.get(TICameraParameters::KEY_VTC_HINT)) != NULL ) {
                 mParameters.set(TICameraParameters::KEY_VTC_HINT, valstr);
@@ -486,7 +487,7 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 }
             }
 #endif
-            }
+        }
 
         if ((valstr = params.get(TICameraParameters::KEY_IPP)) != NULL) {
             if (isParameterValid(valstr,mCameraProperties->get(CameraProperties::SUPPORTED_IPP_MODES))) {
@@ -501,6 +502,7 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 return BAD_VALUE;
             }
         }
+
 #ifndef OMAP_TUNA
         if ( (valstr = params.get(TICameraParameters::KEY_S3D_PRV_FRAME_LAYOUT)) != NULL )
             {
@@ -679,21 +681,21 @@ int CameraHal::setParameters(const android::CameraParameters& params)
 #endif
 
         // Variable framerate ranges have higher priority over
-        // deprecated constant FPS. "KEY_PREVIEW_FPS_RANGE" should
-        // be cleared by the client in order for constant FPS to get
-        // applied.
-        // If Port FPS needs to be used for configuring, then FPS RANGE should not be set by the APP.
-
-            // APP wants to set FPS range
-            // Set framerate = MAXFPS
+        // deprecated constant FPS.
+        // There is possible 3 situations :
+        // 1) User change FPS range and HAL use it for fps port value (don't care about
+        //    changed or not const FPS).
+        // 2) User change single FPS and not change FPS range - will be applyed single FPS value
+        //    to port.
+        // 3) Both FPS range and const FPS are unchanged - FPS range will be applied to port.
 
         int curFramerate = 0;
         bool frameRangeUpdated = false, fpsUpdated = false;
         int curMaxFPS = 0, curMinFPS = 0, maxFPS = 0, minFPS = 0;
 
         mParameters.getPreviewFpsRange(&curMinFPS, &curMaxFPS);
-            params.getPreviewFpsRange(&minFPS, &maxFPS);
-            // Validate VFR
+        params.getPreviewFpsRange(&minFPS, &maxFPS);
+
         curFramerate = mParameters.getPreviewFrameRate();
         framerate = params.getPreviewFrameRate();
 
@@ -707,14 +709,15 @@ int CameraHal::setParameters(const android::CameraParameters& params)
                 CAMHAL_LOGEA("Trying to set invalid FPS Range (%d,%d)", minFPS, maxFPS);
                 return BAD_VALUE;
             }
-                mParameters.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, valstr);
-                CAMHAL_LOGDB("FPS Range = %s", valstr);
-                if ( curMaxFPS == (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) &&
-                     (unsigned int)maxFPS < (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) ) {
-                    restartPreviewRequired = true;
-                }
-            frameRangeUpdated = true;
+            mParameters.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, valstr);
+            CAMHAL_LOGDB("FPS Range = %s", valstr);
+            if ( curMaxFPS == (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) &&
+                (unsigned int) maxFPS < (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) ) {
+                restartPreviewRequired = true;
             }
+            frameRangeUpdated = true;
+        }
+
         valstr = params.get(android::CameraParameters::KEY_PREVIEW_FRAME_RATE);
         if (valstr != NULL && strlen(valstr) && (framerate != curFramerate)) {
             CAMHAL_LOGD("current framerate = %d reqested framerate = %d", curFramerate, framerate);
@@ -1504,23 +1507,21 @@ status_t CameraHal::allocImageBufs(unsigned int width, unsigned int height, size
 
     LOG_FUNCTION_NAME;
 
-
     // allocate image buffers only if not already allocated
     if(NULL != mImageBuffers) {
         return NO_ERROR;
     }
 
     if ( NO_ERROR == ret ) {
-        bytes = ((bytes + 4095) / 4096) * 4096;
+        bytes = ((bytes+4095)/4096)*4096;
         mImageBuffers = mMemoryManager->allocateBufferList(0, 0, previewFormat, bytes, bufferCount);
-
-    CAMHAL_LOGDB("Size of Image cap buffer = %d", bytes);
-    if ( NULL == mImageBuffers ) {
-        CAMHAL_LOGEA("Couldn't allocate image buffers using memory manager");
-        ret = -NO_MEMORY;
-    } else {
-        bytes = size;
-    }
+        CAMHAL_LOGDB("Size of Image cap buffer = %d", bytes);
+        if( NULL == mImageBuffers ) {
+            CAMHAL_LOGEA("Couldn't allocate image buffers using memory manager");
+            ret = -NO_MEMORY;
+        } else {
+            bytes = size;
+        }
     }
 
     if ( NO_ERROR == ret ) {
@@ -1700,7 +1701,7 @@ status_t CameraHal::freeImageBufs()
         ret = mMemoryManager->freeBufferList(mImageBuffers);
     }
 
-        mImageBuffers = NULL;
+    mImageBuffers = NULL;
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -2169,7 +2170,6 @@ void CameraHal::setExtendedPreviewStreamOps(preview_stream_extended_ops_t *ops)
    Buffers provided to CameraHal via this object for tap-out
    functionality.
 
-
    @param[in] window The ANativeWindow object created by Surface flinger
    @return NO_ERROR If the ANativeWindow object passes validation criteria
    @todo Define validation criteria for ANativeWindow object. Define error codes for scenarios
@@ -2187,11 +2187,13 @@ status_t CameraHal::setTapoutLocked(struct preview_stream_ops *tapout)
         LOG_FUNCTION_NAME_EXIT;
         return NO_ERROR;
     }
-   // If either a tapin or tapout was previously set
-   // we need to clean up and clear capturing
 
-   // Set tapout point
-   // destroy current buffer tapout if NULL tapout is passed
+    // Set tapout point
+    // 1. Check name of tap-out
+    // 2. If not already set, then create a new one
+    // 3. Allocate buffers. If user is re-setting the surface, free buffers first and re-allocate
+    //    in case dimensions have changed
+
     for (unsigned int i = 0; i < mOutAdapters.size(); i++) {
         android::sp<DisplayAdapter> out;
         out = mOutAdapters.itemAt(i);
@@ -2199,9 +2201,9 @@ status_t CameraHal::setTapoutLocked(struct preview_stream_ops *tapout)
         if (ret == ALREADY_EXISTS) {
             CAMHAL_LOGD("Tap Out already set at index = %d", i);
             index = i;
-        ret = NO_ERROR;
+            ret = NO_ERROR;
         }
-        }
+    }
 
     if (index < 0) {
         android::sp<DisplayAdapter> out  = new BufferSourceAdapter();
@@ -2213,14 +2215,14 @@ status_t CameraHal::setTapoutLocked(struct preview_stream_ops *tapout)
             goto exit;
         }
 
-        // CameraAdapter will be the frame provider for BufferSourceAdapter
+        // BufferSourceAdapter will be handler of the extended OPS
         out->setExtendedOps(mExtendedPreviewStreamOps);
 
-        // BufferSourceAdapter will use ErrorHandler to send errors back to
+        // CameraAdapter will be the frame provider for BufferSourceAdapter
         out->setFrameProvider(mCameraAdapter);
-        // the application
 
-        // Update the display adapter with the new window that is passed from CameraService
+        // BufferSourceAdapter will use ErrorHandler to send errors back to
+        // the application
         out->setErrorHandler(mAppCallbackNotifier.get());
 
         // Update the display adapter with the new window that is passed from CameraService
@@ -2229,11 +2231,11 @@ status_t CameraHal::setTapoutLocked(struct preview_stream_ops *tapout)
             CAMHAL_LOGEB("DisplayAdapter setPreviewWindow returned error %d", ret);
             goto exit;
         }
-        // Update the display adapter with the new window that is passed from CameraService
+
         if (NULL != mCameraAdapter) {
             unsigned int bufferCount, max_queueable;
             CameraFrame frame;
-            // ALREADY_EXISTS should be treated as a noop in this case
+
             bufferCount = out->getBufferCount();
             if (bufferCount < 1) bufferCount = NO_BUFFERS_IMAGE_CAPTURE_SYSTEM_HEAP;
 
@@ -2242,7 +2244,7 @@ status_t CameraHal::setTapoutLocked(struct preview_stream_ops *tapout)
                                                   bufferCount);
             if (NO_ERROR != ret) {
                 CAMHAL_LOGEB("CAMERA_QUERY_BUFFER_SIZE_IMAGE_CAPTURE returned error 0x%x", ret);
-        }
+            }
             if (NO_ERROR == ret) {
                 CameraBuffer *bufs = NULL;
                 unsigned int stride;
@@ -2257,7 +2259,7 @@ status_t CameraHal::setTapoutLocked(struct preview_stream_ops *tapout)
                                                bufferCount);
                 if (bufs == NULL){
                     CAMHAL_LOGEB("error allocating buffer list");
-       goto exit;
+                    goto exit;
                 }
             }
         }
@@ -2337,12 +2339,18 @@ status_t CameraHal::setTapinLocked(struct preview_stream_ops *tapin)
     int index = -1;
 
     LOG_FUNCTION_NAME;
-   // 1. Set tapin point
+
     if (!tapin) {
         CAMHAL_LOGD("Missing argument");
         LOG_FUNCTION_NAME_EXIT;
         return NO_ERROR;
-        }
+    }
+
+    // 1. Set tapin point
+    // 1. Check name of tap-in
+    // 2. If not already set, then create a new one
+    // 3. Allocate buffers. If user is re-setting the surface, free buffers first and re-allocate
+    //    in case dimensions have changed
     for (unsigned int i = 0; i < mInAdapters.size(); i++) {
         android::sp<DisplayAdapter> in;
         in = mInAdapters.itemAt(i);
@@ -2350,9 +2358,9 @@ status_t CameraHal::setTapinLocked(struct preview_stream_ops *tapin)
         if (ret == ALREADY_EXISTS) {
             CAMHAL_LOGD("Tap In already set at index = %d", i);
             index = i;
-        ret = NO_ERROR;
+            ret = NO_ERROR;
         }
-        }
+    }
 
     if (index < 0) {
         android::sp<DisplayAdapter> in  = new BufferSourceAdapter();
@@ -2364,14 +2372,14 @@ status_t CameraHal::setTapinLocked(struct preview_stream_ops *tapin)
             goto exit;
         }
 
-        // We need to set a frame provider so camera adapter can return the frame back to us
+        // BufferSourceAdapter will be handler of the extended OPS
         in->setExtendedOps(mExtendedPreviewStreamOps);
 
-        // BufferSourceAdapter will use ErrorHandler to send errors back to
+        // CameraAdapter will be the frame provider for BufferSourceAdapter
         in->setFrameProvider(mCameraAdapter);
-        // the application
 
-        // Update the display adapter with the new window that is passed from CameraService
+        // BufferSourceAdapter will use ErrorHandler to send errors back to
+        // the application
         in->setErrorHandler(mAppCallbackNotifier.get());
 
         // Update the display adapter with the new window that is passed from CameraService
@@ -2380,16 +2388,18 @@ status_t CameraHal::setTapinLocked(struct preview_stream_ops *tapin)
             CAMHAL_LOGEB("DisplayAdapter setPreviewWindow returned error %d", ret);
             goto exit;
         }
-        // Update the display adapter with the new window that is passed from CameraService
+
         mInAdapters.add(in);
     }
-            // ALREADY_EXISTS should be treated as a noop in this case
+
 exit:
 
     LOG_FUNCTION_NAME_EXIT;
 
     return ret;
-        }
+}
+
+
 /**
    @brief Releases Tapin Surfaces.
 
@@ -2477,7 +2487,7 @@ status_t CameraHal::setBufferSource(struct preview_stream_ops *tapin, struct pre
         goto exit;
     }
 
- exit:
+exit:
     LOG_FUNCTION_NAME_EXIT;
 
     return ret;
@@ -2523,6 +2533,7 @@ status_t CameraHal::releaseBufferSource(struct preview_stream_ops *tapin, struct
 exit:
 
     LOG_FUNCTION_NAME_EXIT;
+
     return ret;
 }
 #endif
@@ -2718,9 +2729,9 @@ bool CameraHal::setVideoModeParameters(const android::CameraParameters& params)
         CAMHAL_LOGDA("Set CAPTURE_MODE to VIDEO_MODE");
         mParameters.set(TICameraParameters::KEY_CAP_MODE, (const char *) TICameraParameters::VIDEO_MODE);
         restartPreviewRequired = true;
-        }
+    }
 
-    // set VSTAB. restart is required if vstab value has changed
+    // set VSTAB, restart is required if VSTAB value has changed
     int prevWidth, prevHeight;
     params.getPreviewSize(&prevWidth, &prevHeight);
     valstr = mParameters.get(android::CameraParameters::KEY_VIDEO_STABILIZATION);
@@ -2734,20 +2745,20 @@ bool CameraHal::setVideoModeParameters(const android::CameraParameters& params)
         mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION,
                         android::CameraParameters::FALSE);
     } else {
-    if ( (valstrRemote = params.get(android::CameraParameters::KEY_VIDEO_STABILIZATION)) != NULL ) {
-        // make sure we support vstab
-        if (strcmp(mCameraProperties->get(CameraProperties::VSTAB_SUPPORTED),
-                   android::CameraParameters::TRUE) == 0) {
+        if ((valstrRemote = params.get(android::CameraParameters::KEY_VIDEO_STABILIZATION)) != NULL) {
+            // make sure we support vstab
+            if (strcmp(mCameraProperties->get(CameraProperties::VSTAB_SUPPORTED),
+                       android::CameraParameters::TRUE) == 0) {
                 if (strcmp(valstr, valstrRemote) != 0) {
-                restartPreviewRequired = true;
+                    restartPreviewRequired = true;
+                }
+                mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION,
+                                valstrRemote);
             }
-            mParameters.set(android::CameraParameters::KEY_VIDEO_STABILIZATION,
-                            valstrRemote);
-        }
-    } else if (mParameters.get(android::CameraParameters::KEY_VIDEO_STABILIZATION)) {
-        // vstab was configured but now unset
-        restartPreviewRequired = true;
-        mParameters.remove(android::CameraParameters::KEY_VIDEO_STABILIZATION);
+        } else if (mParameters.get(android::CameraParameters::KEY_VIDEO_STABILIZATION)) {
+            // vstab was configured but now unset
+            restartPreviewRequired = true;
+            mParameters.remove(android::CameraParameters::KEY_VIDEO_STABILIZATION);
         }
     }
 
@@ -3217,10 +3228,12 @@ status_t CameraHal::stopImageBracketing()
  */
 status_t CameraHal::takePicture(const char *params)
 {
+    // cancel AF state if needed (before any operation and mutex lock)
     if ((mCameraAdapter->getState() == CameraAdapter::AF_STATE) ||
         (mCameraAdapter->getState() == CameraAdapter::VIDEO_AF_STATE)) {
         cancelAutoFocus();
     }
+
     android::AutoMutex lock(mLock);
     return __takePicture(params);
 }
@@ -3235,8 +3248,6 @@ status_t CameraHal::takePicture(const char *params)
  */
 status_t CameraHal::__takePicture(const char *params, struct timeval *captureStart)
 {
-    // cancel AF state if needed (before any operation and mutex lock)
-
     status_t ret = NO_ERROR;
     CameraFrame frame;
     CameraAdapter::BuffersDescriptor desc;
@@ -3252,7 +3263,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
 #if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
 
     if ( NULL == captureStart ) {
-    gettimeofday(&mStartCapture, NULL);
+        gettimeofday(&mStartCapture, NULL);
     } else {
         memcpy(&mStartCapture, captureStart, sizeof(struct timeval));
     }
@@ -3295,7 +3306,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
     // check if camera application is using shots parameters
     // api. parameters set here override anything set using setParameters
     // TODO(XXX): Just going to use legacy TI parameters for now. Need
-    // add new APIs in CameraHal to utilize ShotParameters later, so
+    // add new APIs in CameraHal to utilize android::ShotParameters later, so
     // we don't have to parse through the whole set of parameters
     // in camera adapter
     if (strlen(params) > 0) {
@@ -3354,6 +3365,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
                 reuseTapout = true;
             }
         }
+
         mCameraAdapter->setParameters(mParameters);
     } else
 #endif
@@ -3361,14 +3373,16 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
         // TODO(XXX): Should probably reset burst and bracketing params
         // when we remove legacy TI parameters implementation
     }
+
 #if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
 
     CameraHal::PPM("Takepicture parameters set: ", &mStartCapture);
 
 #endif
 
-    // if we are already in the middle of a capture...then we just need
-    // setParameters and start image capture to queue more shots
+    // if we are already in the middle of a capture and using the same
+    // tapout ST...then we just need setParameters and start image
+    // capture to queue more shots
     if (((mCameraAdapter->getState() & CameraAdapter::CAPTURE_STATE) ==
               CameraAdapter::CAPTURE_STATE) &&
          (mCameraAdapter->getNextState() != CameraAdapter::PREVIEW_STATE) &&
@@ -3385,7 +3399,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
 
     if ( !mBracketingRunning )
     {
-         // if application didn't set burst through ShotParameters
+         // if application didn't set burst through android::ShotParameters
          // then query from TICameraParameters
          if ((burst == -1) && (NO_ERROR == ret)) {
             burst = mParameters.getInt(TICameraParameters::KEY_BURST);
@@ -3403,10 +3417,8 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
                 } else {
                     bufferCount = outAdapter->getBufferCount();
                     if (bufferCount < 1) {
-                 // TODO(XXX): Temporarily increase number of buffers we can allocate from ANW
-                 // until faux-NPA mode is implemented
-                 bufferCount = NO_BUFFERS_IMAGE_CAPTURE_SYSTEM_HEAP;
-             }
+                        bufferCount = NO_BUFFERS_IMAGE_CAPTURE_SYSTEM_HEAP;
+                    }
                 }
              }
 
@@ -3495,12 +3507,12 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
             if ( NO_ERROR == ret ) {
                 max_queueable = bufferCount;
                 ret = allocImageBufs(frame.mAlignment / getBPP(mParameters.getPictureFormat()),
-                                 frame.mHeight,
-                                 frame.mLength,
-                                 mParameters.getPictureFormat(),
+                                     frame.mHeight,
+                                     frame.mLength,
+                                     mParameters.getPictureFormat(),
                                      bufferCount);
                 if ( NO_ERROR != ret ) {
-                CAMHAL_LOGEB("allocImageBufs returned error 0x%x", ret);
+                    CAMHAL_LOGEB("allocImageBufs returned error 0x%x", ret);
                 }
             }
         }
@@ -3512,7 +3524,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
 
 #endif
 
-        if (  (NO_ERROR == ret) && ( NULL != mCameraAdapter ) )
+    if (  (NO_ERROR == ret) && ( NULL != mCameraAdapter ) )
             {
             desc.mBuffers = mImageBuffers;
             desc.mOffsets = mImageOffsets;
@@ -3556,6 +3568,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
         CameraHal::PPM("Takepicture buffers registered: ", &mStartCapture);
 
 #endif
+
     if ((ret == NO_ERROR) && mBufferSourceAdapter_Out.get()) {
         mBufferSourceAdapter_Out->enableDisplay(0, 0, NULL);
     }
@@ -3568,6 +3581,7 @@ status_t CameraHal::__takePicture(const char *params, struct timeval *captureSta
         ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_START_IMAGE_CAPTURE,  (int) &mStartCapture);
 
         CameraHal::PPM("Takepicture capture started: ", &mStartCapture);
+
 #else
 
         ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_START_IMAGE_CAPTURE);
@@ -3722,6 +3736,7 @@ status_t CameraHal::reprocess(const char *params)
         CAMHAL_LOGE("No tap in surface sent with shot config!");
         return BAD_VALUE;
     }
+
     // 1. Get buffers
     if (mBufferSourceAdapter_In.get()) {
         reprocBuffers = mBufferSourceAdapter_In->getBufferList(&bufferCount);
@@ -3731,6 +3746,8 @@ status_t CameraHal::reprocess(const char *params)
         CAMHAL_LOGE("Error: couldn't get input buffers for reprocess()");
         goto exit;
     }
+
+
 #if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
 
     CameraHal::PPM("Got reprocess buffers: ", &startReprocess);
@@ -3741,6 +3758,7 @@ status_t CameraHal::reprocess(const char *params)
     {
         shotParams.setBurst(bufferCount);
     }
+
 #if PPM_INSTRUMENTATION || PPM_INSTRUMENTATION_ABS
 
     memcpy(&reprocBuffers->ppmStamp, &startReprocess, sizeof(struct timeval));
@@ -3754,6 +3772,7 @@ status_t CameraHal::reprocess(const char *params)
     desc.mLength = 0;
     desc.mCount = (size_t) bufferCount;
     desc.mMaxQueueable = (size_t) bufferCount;
+
     ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_USE_BUFFERS_REPROCESS, (int) &desc);
     if (ret != NO_ERROR) {
         CAMHAL_LOGE("Error calling camera use buffers");
@@ -3765,6 +3784,7 @@ status_t CameraHal::reprocess(const char *params)
     CameraHal::PPM("Reprocess buffers registered: ", &startReprocess);
 
 #endif
+
     // 4. Start reprocessing
     ret = mBufferSourceAdapter_In->enableDisplay(0, 0, NULL);
     if (ret != NO_ERROR) {
@@ -3772,7 +3792,7 @@ status_t CameraHal::reprocess(const char *params)
         goto exit;
     }
 
-    // 5. Start capturing
+    // 4.5. cancel AF state if needed (before any operation and mutex lock)
     if ((mCameraAdapter->getState() == CameraAdapter::AF_STATE) ||
         (mCameraAdapter->getState() == CameraAdapter::VIDEO_AF_STATE)) {
         cancelAutoFocus();
@@ -3781,7 +3801,7 @@ status_t CameraHal::reprocess(const char *params)
     // 5. Start capturing
     ret = __takePicture(shotParams.flatten().string(), &startReprocess);
 
- exit:
+exit:
     return ret;
 }
 
@@ -3826,7 +3846,7 @@ status_t CameraHal::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2)
         }
 
     ///////////////////////////////////////////////////////
-    // Following commands do NOT need preview to be started
+    // Following commands NEED preview to be started
     ///////////////////////////////////////////////////////
 
     if ((!previewEnabled()) && ((cmd == CAMERA_CMD_START_SMOOTH_ZOOM)
@@ -3841,34 +3861,28 @@ status_t CameraHal::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2)
         return BAD_VALUE;
     }
 
-    ///////////////////////////////////////////////////////
-    // Following commands NEED preview to be started
-    ///////////////////////////////////////////////////////
-
     if ( NO_ERROR == ret )
         {
         switch(cmd)
             {
             case CAMERA_CMD_START_SMOOTH_ZOOM:
-
                 ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_START_SMOOTH_ZOOM, arg1);
 
                 break;
 
             case CAMERA_CMD_STOP_SMOOTH_ZOOM:
                 ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_STOP_SMOOTH_ZOOM);
+
                 break;
 
             case CAMERA_CMD_START_FACE_DETECTION:
-
                 ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_START_FD);
 
                 break;
 
             case CAMERA_CMD_STOP_FACE_DETECTION:
-
                 if (previewEnabled()) {
-                ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_STOP_FD);
+                    ret = mCameraAdapter->sendCommand(CameraAdapter::CAMERA_STOP_FD);
                 }
 
                 break;
@@ -3911,6 +3925,7 @@ status_t CameraHal::sendCommand(int32_t cmd, int32_t arg1, int32_t arg2)
                 break;
             }
 #endif
+
             default:
                 break;
             };
@@ -4049,6 +4064,7 @@ CameraHal::CameraHal(int cameraId)
     mCameraIndex = cameraId;
 
     mExternalLocking = false;
+
     LOG_FUNCTION_NAME_EXIT;
 }
 
@@ -4718,6 +4734,7 @@ void CameraHal::deinitialize()
     mBufferSourceAdapter_In.clear();
     mOutAdapters.clear();
     mInAdapters.clear();
+
     LOG_FUNCTION_NAME_EXIT;
 
 }
