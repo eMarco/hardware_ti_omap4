@@ -210,7 +210,6 @@ static OMX_ERRORTYPE _OMX_CameraVtcAllocateMemory(OMX_IN OMX_HANDLETYPE hCompone
                         DOMX_ERROR("OMX_GetParameter for OMX_IndexParamVideoNoiseFilter returned error %x", eError);
                         goto EXIT;
                     }
-#ifndef OMAP_TUNA
                     DOMX_DEBUG(" Acquired OMX_TI_IndexParamVtcSlice data. nSliceHeight = %d, bVstabOn = %d, Vnfmode = %d, nWidth = %d, nHeight = %d.\n\n", tVtcConfig.nSliceHeight, tVstabParam.bEnabled, tVnfParam.eMode, nFrmWidth, nFrmHeight);
                     if (tVstabParam.bEnabled == OMX_FALSE && tVnfParam.eMode != OMX_VideoNoiseFilterModeOff) {
                         eError = GLUE_CameraVtcAllocateMemory(hComponent,
@@ -222,7 +221,6 @@ static OMX_ERRORTYPE _OMX_CameraVtcAllocateMemory(OMX_IN OMX_HANDLETYPE hCompone
                            goto EXIT;
                         }
                    }
-#endif
                 }
             }
         }
@@ -506,7 +504,6 @@ static OMX_ERRORTYPE CameraSetParam(OMX_IN OMX_HANDLETYPE
     OMX_INOUT OMX_PTR pComponentParameterStructure)
 {
     OMX_ERRORTYPE eError = OMX_ErrorNone;
-#ifndef OMAP_TUNA
     PROXY_COMPONENT_PRIVATE *pCompPrv;
     OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *)hComponent;
 
@@ -523,7 +520,6 @@ static OMX_ERRORTYPE CameraSetParam(OMX_IN OMX_HANDLETYPE
 	default:
 		 break;
 	}
-#endif
 	eError = __PROXY_SetParameter(hComponent,
 								nParamIndex,
 								pComponentParameterStructure,

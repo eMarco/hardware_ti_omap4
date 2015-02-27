@@ -55,6 +55,7 @@
 #define OMX_TI_VIDEO_H
 #define H264ENC_MAXNUMSLCGPS 2
 #define OMXH264E_MAX_SLICE_SUPPORTED 64
+#define H264SVC_MAX_NUM_LAYER 9
 #include <OMX_Core.h>
 
 /**
@@ -362,8 +363,7 @@ typedef struct OMX_TI_VIDEO_PARAM_AVCINTERLACECODING{
 */
 /* ==========================================================================*/
 
-typedef struct OMX_TI_VIDEO_PARAM_AVCENC_STEREOINFO2004
-{
+typedef struct OMX_TI_VIDEO_PARAM_AVCENC_STEREOINFO2004 {
 	OMX_U32          nSize;
 	OMX_VERSIONTYPE  nVersion;
 	OMX_U32          nPortIndex;
@@ -387,8 +387,7 @@ typedef enum OMX_TI_VIDEO_AVCSTEREO_FRAMEPACKTYPE{
 */
 /* ==========================================================================*/
 
-typedef struct OMX_TI_VIDEO_PARAM_AVCENC_FRAMEPACKINGINFO2010
-{
+typedef struct OMX_TI_VIDEO_PARAM_AVCENC_FRAMEPACKINGINFO2010 {
 	OMX_U32          nSize;
 	OMX_VERSIONTYPE nVersion;
 	OMX_U32          nPortIndex;
@@ -545,7 +544,7 @@ typedef enum OMX_TI_VIDEO_CODINGTYPE {
 		(OMX_VIDEO_CODINGTYPE) OMX_VIDEO_CodingVendorStartUnused +1,  /* VP6 */
 	OMX_VIDEO_CodingVP7, /* VP7 */
         OMX_TI_VIDEO_CodingSORENSONSPK, /* Sorenson spark*/
-        OMX_VIDEO_CodingSVC,    /**< H.264/SVC */
+    OMX_VIDEO_CodingSVC        /**< H.264/SVC */
 }OMX_TI_VIDEO_CODINGTYPE;
 
 

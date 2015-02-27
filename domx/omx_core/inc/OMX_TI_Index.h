@@ -218,7 +218,10 @@ typedef enum OMX_TI_INDEXTYPE {
 #endif
     OMX_TI_IndexParamComponentBufferAllocation,         /**< 0x7F00009F reference: OMX_TI_PARAM_COMPONENTBUFALLOCTYPE */
     OMX_TI_IndexParamComponentExpectedSuspensionState,  /**< 0x7F0000** reference: OMX_PARAM_SUSPENSIONTYPE */
-    OMX_TI_IndexUseBufferDescriptor                    /**< 0x7F0000** reference: OMX_TI_PARAM_USEBUFFERDESCRIPTOR */
+    OMX_TI_IndexUseBufferDescriptor,                    /**< 0x7F0000** reference: OMX_TI_PARAM_USEBUFFERDESCRIPTOR */
+#ifndef OMAP_TUNA
+    OMX_TI_IndexConfigGammaTable                       /**< 0x7F0000B5 reference: OMX_TI_CONFIG_SHAREDBUFFER */
+#endif
 } OMX_TI_INDEXTYPE;
 
 

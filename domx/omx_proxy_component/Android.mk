@@ -112,11 +112,8 @@ ifdef TI_CAMERAHAL_USES_LEGACY_DOMX_DCC
 LOCAL_CFLAGS += -DUSES_LEGACY_DOMX_DCC
 endif
 
-LOCAL_SRC_FILES:= omx_camera/src/omx_proxy_camera.c
-
-ifndef OMAP_TUNA
-LOCAL_SRC_FILES += omx_camera/src/proxy_camera_android_glue.c
-endif
+LOCAL_SRC_FILES:= omx_camera/src/omx_proxy_camera.c \
+                  omx_camera/src/proxy_camera_android_glue.c
 
 LOCAL_MODULE:= libOMX.TI.DUCATI1.VIDEO.CAMERA
 include $(BUILD_HEAPTRACKED_SHARED_LIBRARY)
