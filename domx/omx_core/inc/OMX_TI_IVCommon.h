@@ -462,8 +462,12 @@ typedef enum OMX_BRACKETMODETYPE {
     OMX_BracketFlashPower,
     OMX_BracketAperture,
     OMX_BracketTemporal,
+#ifdef OMAP_ENHANCEMENT
     OMX_BracketExposureGainAbsolute,
+#endif
+#ifndef OMAP_TUNA
     OMX_BracketVectorShot,
+#endif
     OMX_BrackerTypeKhronosExtensions = 0x6f000000,
     OMX_BrackerTypeVendorStartUnused = 0x7f000000,
     OMX_BracketTypeMax = 0x7FFFFFFF
@@ -476,7 +480,9 @@ typedef struct OMX_CONFIG_BRACKETINGTYPE {
     OMX_BRACKETMODETYPE eBracketMode;
     OMX_U32             nNbrBracketingValues;
     OMX_S32             nBracketValues[10];     /**< 10 can be assumed */
+#ifndef OMAP_TUNA
     OMX_S32             nBracketValues2[10];     /**< 10 can be assumed */
+#endif
 } OMX_CONFIG_BRACKETINGTYPE;
 
 
@@ -524,17 +530,23 @@ typedef enum OMX_CAMOPERATINGMODETYPE {
         OMX_TI_CaptureDummy,
         OMX_TI_CaptureGestureRecognition,
         OMX_TI_CaptureImageProfileZeroShutterLag,
+#ifndef OMAP_TUNA
         OMX_TI_SinglePreview,
         OMX_TI_StereoGestureRecognition,
         OMX_TI_CPCam,
         OMX_TI_StereoVideo,
+#endif
         OMX_CaptureHighQualityVideo,
         OMX_TI_Reprocessing,
+#ifndef OMAP_TUNA //eMarco : TBC
         // Put new entries here so OMX_CamOperatingModeMax always points to
         // the last one
         OMX_TI_CamOperatingModeCount,
         OMX_CamOperatingModeMax = OMX_TI_CamOperatingModeCount - 1,
         OMX_CamOperatingMode = 0x7fffffff
+#else
+        OMX_CamOperatingModeMax = 0x7fffffff
+#endif
 } OMX_CAMOPERATINGMODETYPE;
 
 /**
@@ -694,7 +706,7 @@ typedef enum OMX_IMAGE_EXTFOCUSCONTROLTYPE {
     OMX_IMAGE_FocusControlContinousPicture,
     OMX_IMAGE_FocusControlTypeMax = 0x7fffffff
 #else
-    OMX_IMAGE_FocusControlContinousExtended,     /**< from Xena */
+    OMX_IMAGE_FocusControlContinousExtended     /**< from Xena */
 #endif
 } OMX_IMAGE_EXTFOCUSCONTROLTYPE;
 

@@ -210,17 +210,16 @@ typedef enum OMX_TI_INDEXTYPE {
     OMX_TI_IndexConfigZslFrameSelectMethod,              /**< reference: OMX_TI_CONFIG_ZSLFRAMESELECTMETHODTYPE */
     OMX_TI_IndexAndroidNativeBufferUsage,          /**< reference: OMX_TI_IndexAndroidNativeBufferUsage */
     OMX_TI_IndexConfigAlgoAreas,                         /**< reference: OMX_PARAM_SHAREDBUFFER (pSharedBuff is OMX_ALGOAREASTYPE) */
-    OMX_TI_IndexParamVtcSlice,
     OMX_TI_IndexConfigAutofocusEnable,             /**< reference: OMX_CONFIG_BOOLEANTYPE */
+    OMX_TI_IndexParamVtcSlice,
     OMX_TI_IndexComponentHandle,                        /**< 0x7F0000** reference: OMX_TI_COMPONENT_HANDLE */
-#ifndef OMAP_TUNA
-    OMX_TI_IndexConfigAFScore,                          /**< 0x7F000095 reference: OMX_CONFIG_AUTOFOCUSSCORE */
-#endif
     OMX_TI_IndexParamComponentBufferAllocation,         /**< 0x7F00009F reference: OMX_TI_PARAM_COMPONENTBUFALLOCTYPE */
     OMX_TI_IndexParamComponentExpectedSuspensionState,  /**< 0x7F0000** reference: OMX_PARAM_SUSPENSIONTYPE */
-    OMX_TI_IndexUseBufferDescriptor,                    /**< 0x7F0000** reference: OMX_TI_PARAM_USEBUFFERDESCRIPTOR */
 #ifndef OMAP_TUNA
-    OMX_TI_IndexConfigGammaTable                       /**< 0x7F0000B5 reference: OMX_TI_CONFIG_SHAREDBUFFER */
+    OMX_TI_IndexConfigAFScore,                          /**< 0x7F000095 reference: OMX_CONFIG_AUTOFOCUSSCORE */
+    OMX_TI_IndexConfigGammaTable,                      /**< 0x7F0000B5 reference: OMX_TI_CONFIG_SHAREDBUFFER */
+else
+    OMX_TI_IndexUseBufferDescriptor                    /**< 0x7F0000** reference: OMX_TI_PARAM_USEBUFFERDESCRIPTOR */
 #endif
 } OMX_TI_INDEXTYPE;
 
