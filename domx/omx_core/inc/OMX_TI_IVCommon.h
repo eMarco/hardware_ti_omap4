@@ -687,11 +687,15 @@ typedef enum OMX_IMAGE_EXTFOCUSCONTROLTYPE {
     OMX_IMAGE_FocusControlPortrait, /**< from Xena */
     OMX_IMAGE_FocusControlExtended, /**< from Xena */
     OMX_IMAGE_FocusControlContinousNormal, /**< from Xena */
+#ifndef OMAP_TUNA
     OMX_IMAGE_FocusControlContinousExtended,     /**< from Xena */
     OMX_IMAGE_FocusControlContinousFacePriority,
     OMX_IMAGE_FocusControlContinousRegionPriority,
     OMX_IMAGE_FocusControlContinousPicture,
     OMX_IMAGE_FocusControlTypeMax = 0x7fffffff
+#else
+    OMX_IMAGE_FocusControlContinousExtended,     /**< from Xena */
+#endif
 } OMX_IMAGE_EXTFOCUSCONTROLTYPE;
 
 
@@ -1067,6 +1071,8 @@ typedef struct OMX_TI_IMAGEPYRAMIDTYPE {
     OMX_U32                     nLevelsCount;
     OMX_TI_IMAGEPYRAMIDDESCTYPE PyramidData[1];
 } OMX_TI_IMAGEPYRAMIDTYPE;
+
+
 #define OMX_OTHER_EXTRADATATYPE_SIZE ((OMX_U32)(((OMX_OTHER_EXTRADATATYPE *)0x0)->data))  /**< Size of OMX_OTHER_EXTRADATATYPE
                                                                                 without Data[1] and without padding */
 
@@ -2449,15 +2455,34 @@ typedef struct OMX_TI_CONFIG_EXIF_TAGS {
 	OMX_U16                 usGpsDifferential;
 } OMX_TI_CONFIG_EXIF_TAGS;
 
+#ifndef OMAP_TUNA
+/**
+ * The OMX_TI_SENFACING_TYPE enumeration is used to define the
+ * sensor facing.
+ */
+typedef enum OMX_TI_SENFACING_TYPE {
+    OMX_TI_SENFACING_FRONT,
+    OMX_TI_SENFACING_BACK,
+    OMX_TI_SENFACING_MAX = 0x7FFFFFFF
+}OMX_TI_SENFACING_TYPE;
+#endif
 /**
  * Structure used to configure current OMX_TI_SENMOUNT_TYPE
  *
  * @param nSenId
  * @param nRotation
+ * @param bMirror
+ * @param bFlip
+ * @param eFacing
  */
 typedef struct OMX_TI_SENMOUNT_TYPE {
     OMX_U32             nSenId;
     OMX_U32             nRotation;
+#ifndef OMAP_TUNA
+    OMX_BOOL                bMirror;
+    OMX_BOOL                bFlip;
+    OMX_TI_SENFACING_TYPE   eFacing;
+#endif
 }OMX_TI_SENMOUNT_TYPE;
 
 /**
@@ -2500,6 +2525,7 @@ typedef struct OMX_TI_CONFIG_SHAREDBUFFER {
  * nHeightMin       : Number of the smallest height supported
  * nWidthMax        : Number of the biggest width supported
  * nHeightMax       : Number of the biggest height supported
+ * nMaxResInPixels  : Max resolution in pixels. Used for description of 3d resolutions.
  */
 typedef struct OMX_TI_CAPRESTYPE {
 	OMX_U32         nSize;
@@ -2509,6 +2535,9 @@ typedef struct OMX_TI_CAPRESTYPE {
 	OMX_U32         nHeightMin; // smallest height supported
 	OMX_U32         nWidthMax;  // biggest width supported
 	OMX_U32         nHeightMax; // biggest height supported
+#ifndef OMAP_TUNA
+	OMX_U32         nMaxResInPixels;// max resolution in pixels
+#endif
 } OMX_TI_CAPRESTYPE;
 
 /**
@@ -2523,6 +2552,7 @@ typedef struct OMX_TI_CAPRESTYPE {
  * ulImageFormatCount                   : Number of the supported image pixelformat count
  * eImageFormats                        : Array containing the supported image pixelformat count
  * tPreviewResRange                     : Supported preview resolution range
+ * tRotatedPreviewResRange              : Supported rotated preview resolution range
  * tImageResRange                       : Supported image resolution range
  * tThumbResRange                       : Supported thumbnail resolution range
  * ulWhiteBalanceCount                  : Supported whitebalance mode count
@@ -2607,6 +2637,9 @@ typedef struct OMX_TI_CAPTYPE {
 	OMX_U16                 ulImageFormatCount;     // supported image pixelformat count
 	OMX_COLOR_FORMATTYPE    eImageFormats[100];
 	OMX_TI_CAPRESTYPE       tPreviewResRange;       // supported preview resolution range
+#ifndef OMAP_TUNA
+	OMX_TI_CAPRESTYPE               tRotatedPreviewResRange;     // supported rotated preview resolution range
+#endif
 	OMX_TI_CAPRESTYPE       tImageResRange;         // supported image resolution range
 	OMX_TI_CAPRESTYPE       tThumbResRange;         // supported thumbnail resolution range
 	OMX_U16                 ulWhiteBalanceCount;    // supported whitebalance mode count
@@ -2642,8 +2675,8 @@ typedef struct OMX_TI_CAPTYPE {
 	OMX_U16                 ulCapVarFPSModesCount;  // supported variable FPS capture modes count
 	OMX_TI_VARFPSTYPE       tCapVarFPSModes[10];
 	OMX_TI_SENMOUNT_TYPE    tSenMounting;
-        OMX_U16                 ulAlgoAreasFocusCount;    // supported number of AlgoAreas for focus areas
-       OMX_U16                  ulAlgoAreasExposureCount; // supported number of AlgoAreas for exposure areas
+    OMX_U16                 ulAlgoAreasFocusCount;    // supported number of AlgoAreas for focus areas
+    OMX_U16                 ulAlgoAreasExposureCount;
 } OMX_TI_CAPTYPE;
 
 

@@ -1730,13 +1730,13 @@ status_t OMXCameraAdapter::insertFocalLength(CameraProperties::Properties* param
 
     memset(supported, '\0', sizeof(supported));
 
-#ifndef OMAP_TUNA
+//#ifndef OMAP_TUNA
     sprintf(supported, "%d", caps.nFocalLength / 100);
-#endif
+//#endif
     strncat(supported, ".", REMAINING_BYTES(supported));
-#ifndef OMAP_TUNA
+//#ifndef OMAP_TUNA
     sprintf(supported+(strlen(supported)*sizeof(char)), "%d", caps.nFocalLength % 100);
-#endif
+//#endif
 
     params->set(CameraProperties::FOCAL_LENGTH, supported);
 
