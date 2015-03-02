@@ -571,8 +571,10 @@ typedef enum OMX_TI_VIDEO_INTRAREFRESHTYPE {
     OMX_TI_VIDEO_IntraRefreshCyclicMbs,
     OMX_TI_VIDEO_IntraRefreshCyclicRows,
     OMX_TI_VIDEO_IntraRefreshMandatory,
+#ifndef OMAP_TUNA
     OMX_TI_VIDEO_IntraRefreshAdaptive,
     OMX_TI_VIDEO_IntraRefreshGDR,
+#endif
     OMX_TI_VIDEO_IntraRefreshMax = 0x7FFFFFFF
 } OMX_TI_VIDEO_INTRAREFRESHTYPE;
 
@@ -816,12 +818,17 @@ typedef struct OMX_TI_VIDEO_CONFIG_PICSIZECONTROLINFO {
     OMX_U32         nSize;
     OMX_VERSIONTYPE nVersion;
     OMX_U32         nPortIndex;
+#ifndef OMAP_TUNA
     OMX_U16         minPicSizeRatioI;
     OMX_U16         maxPicSizeRatioI;
     OMX_U16         minPicSizeRatioP;
     OMX_U16         maxPicSizeRatioP;
     OMX_U16         minPicSizeRatioB;
     OMX_U16         maxPicSizeRatioB;
+#else
+    OMX_U16         minPicSizeRatio;
+    OMX_U16         maxPicSizeRatio;
+#endif
 } OMX_TI_VIDEO_CONFIG_PICSIZECONTROLINFO;
 
 

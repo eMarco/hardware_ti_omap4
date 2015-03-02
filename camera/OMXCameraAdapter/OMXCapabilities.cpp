@@ -210,14 +210,9 @@ const CapPixelformat OMXCameraAdapter::mPixelformats [] = {
     { OMX_COLOR_FormatCbYCrY, android::CameraParameters::PIXEL_FORMAT_YUV422I },
     { OMX_COLOR_FormatYUV420SemiPlanar, android::CameraParameters::PIXEL_FORMAT_YUV420SP },
     { OMX_COLOR_Format16bitRGB565, android::CameraParameters::PIXEL_FORMAT_RGB565 },
-#if 0 /*def OMAP_TUNA*/
-    { OMX_COLOR_FormatRawBayer10bit, android::CameraParameters::PIXEL_FORMAT_BAYER_RGGB },
-    { OMX_COLOR_FormatYUV420SemiPlanar, android::CameraParameters::PIXEL_FORMAT_YUV420P },
-#else
     { OMX_COLOR_FormatYUV420SemiPlanar, android::CameraParameters::PIXEL_FORMAT_YUV420P },
     { OMX_COLOR_FormatUnused, TICameraParameters::PIXEL_FORMAT_UNUSED },
     { OMX_COLOR_FormatRawBayer10bit, android::CameraParameters::PIXEL_FORMAT_BAYER_RGGB },
-#endif
 };
 
 #ifndef OMAP_TUNA
@@ -1730,13 +1725,9 @@ status_t OMXCameraAdapter::insertFocalLength(CameraProperties::Properties* param
 
     memset(supported, '\0', sizeof(supported));
 
-#ifndef OMAP_TUNA
     sprintf(supported, "%d", caps.nFocalLength / 100);
-#endif
     strncat(supported, ".", REMAINING_BYTES(supported));
-#ifndef OMAP_TUNA
     sprintf(supported+(strlen(supported)*sizeof(char)), "%d", caps.nFocalLength % 100);
-#endif
 
     params->set(CameraProperties::FOCAL_LENGTH, supported);
 

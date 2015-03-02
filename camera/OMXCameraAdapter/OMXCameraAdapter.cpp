@@ -131,9 +131,9 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
     mComponentState = OMX_StateLoaded;
 
     CAMHAL_LOGVB("OMX_GetHandle -0x%x sensor_index = %lu", eError, mSensorIndex);
-#ifndef OMAP_TUNA
+
     initDccFileDataSave(&mCameraAdapterParameters.mHandleComp, mCameraAdapterParameters.mPrevPortIndex);
-#endif
+
 
     eError = OMX_SendCommand(mCameraAdapterParameters.mHandleComp,
                                   OMX_CommandPortDisable,
@@ -387,8 +387,9 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
     mParameters3A.AlgoSharpening = OMX_TRUE;
     mParameters3A.AlgoThreeLinColorMap = OMX_TRUE;
     mParameters3A.AlgoGIC = OMX_TRUE;
+#ifndef OMAP_TUNA
     memset(&mParameters3A.mGammaTable, 0, sizeof(mParameters3A.mGammaTable));
-
+#endif
     LOG_FUNCTION_NAME_EXIT;
     return Utils::ErrorUtils::omxToAndroidError(eError);
 
@@ -3486,9 +3487,7 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
 
             if ( NULL != extraData ) {
                 ancillaryData = (OMX_TI_ANCILLARYDATATYPE*) extraData->data;
-#ifdef OMAP_TUNA
-                snapshotFrame = ancillaryData->nDCCStatus;
-#else
+
                 if ((OMX_2D_Snap == ancillaryData->eCameraView)
                     || (OMX_3D_Left_Snap == ancillaryData->eCameraView)
                     || (OMX_3D_Right_Snap == ancillaryData->eCameraView)) {
@@ -3496,7 +3495,6 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
                 } else {
                     snapshotFrame = OMX_FALSE;
                 }
-#endif
                 mPending3Asettings |= SetFocus;
             }
         }
@@ -3589,9 +3587,7 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
             }
         }
 
-#ifndef OMAP_TUNA
         sniffDccFileDataSave(pBuffHeader);
-#endif
 
         stat |= advanceZoom();
 
@@ -4148,9 +4144,7 @@ OMXCameraAdapter::OMXCameraAdapter(size_t sensor_index)
     // Initial values
     mTimeSourceDelta = 0;
     onlyOnce = true;
-#ifndef OMAP_TUNA
     mDccData.pData = NULL;
-#endif
 
     mInitSem.Create(0);
     mFlushSem.Create(0);
@@ -4199,11 +4193,10 @@ OMXCameraAdapter::~OMXCameraAdapter()
 
     if ( mOmxInitialized ) {
 
-#ifndef OMAP_TUNA
         saveDccFileDataSave();
 
         closeDccFileDataSave();
-#endif
+
         // deinit the OMX
         if ( mComponentState == OMX_StateLoaded || mComponentState == OMX_StateInvalid ) {
             // free the handle for the Camera component
@@ -4430,7 +4423,6 @@ public:
 #endif
 #endif
 
-#ifndef OMAP_TUNA
 #ifdef CAMERAHAL_OMAP5_CAPTURE_MODES
             CAMHAL_LOGD("Camera mode: VIDEO HQ ");
             properties->setMode(MODE_VIDEO_HIGH_QUALITY);
@@ -4442,7 +4434,7 @@ public:
             }
 
 #endif
-
+#ifndef OMAP_TUNA
         }
 #endif
         return err;
