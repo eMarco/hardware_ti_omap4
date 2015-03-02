@@ -12,7 +12,7 @@ LOCAL_STATIC_LIBRARIES := libpng
 
 LOCAL_MODULE_TAGS := optional
 
-LOCAL_MODULE := hwcomposer.omap4
+LOCAL_MODULE := hwcomposer.tuna
 LOCAL_CFLAGS := -DLOG_TAG=\"ti_hwc\" -fno-strict-aliasing
 LOCAL_C_INCLUDES += external/libpng external/zlib
 
