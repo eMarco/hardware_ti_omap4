@@ -793,6 +793,7 @@ private:
 #ifndef OMAP_TUNA
     // Mechanical Misalignment Correction
     status_t setMechanicalMisalignmentCorrection(bool enable);
+#endif
 
     // DCC file data save
     status_t initDccFileDataSave(OMX_HANDLETYPE* omxHandle, int portIndex);
@@ -802,7 +803,6 @@ private:
     status_t fseekDCCuseCasePos(FILE *pFile);
     FILE * fopenCameraDCC(const char *dccFolderPath);
     FILE * parseDCCsubDir(DIR *pDir, char *path);
-#endif
 
 #ifdef CAMERAHAL_OMX_PROFILING
     status_t storeProfilingData(OMX_BUFFERHEADERTYPE* pBuffHeader);
@@ -1251,10 +1251,8 @@ private:
 
     bool mSetFormatDone;
 
-#ifndef OMAP_TUNA
     OMX_TI_DCCDATATYPE mDccData;
     android::Mutex mDccDataLock;
-#endif
 
     int mMaxZoomSupported;
     android::Mutex mImageCaptureLock;

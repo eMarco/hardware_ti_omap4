@@ -462,8 +462,12 @@ typedef enum OMX_BRACKETMODETYPE {
     OMX_BracketFlashPower,
     OMX_BracketAperture,
     OMX_BracketTemporal,
+#ifdef OMAP_ENHANCEMENT
     OMX_BracketExposureGainAbsolute,
+#endif
+#ifndef OMAP_TUNA
     OMX_BracketVectorShot,
+#endif
     OMX_BrackerTypeKhronosExtensions = 0x6f000000,
     OMX_BrackerTypeVendorStartUnused = 0x7f000000,
     OMX_BracketTypeMax = 0x7FFFFFFF
@@ -476,7 +480,9 @@ typedef struct OMX_CONFIG_BRACKETINGTYPE {
     OMX_BRACKETMODETYPE eBracketMode;
     OMX_U32             nNbrBracketingValues;
     OMX_S32             nBracketValues[10];     /**< 10 can be assumed */
+#ifndef OMAP_TUNA
     OMX_S32             nBracketValues2[10];     /**< 10 can be assumed */
+#endif
 } OMX_CONFIG_BRACKETINGTYPE;
 
 
@@ -524,20 +530,26 @@ typedef enum OMX_CAMOPERATINGMODETYPE {
         OMX_TI_CaptureDummy,
         OMX_TI_CaptureGestureRecognition,
         OMX_TI_CaptureImageProfileZeroShutterLag,
+#ifndef OMAP_TUNA
         OMX_TI_SinglePreview,
         OMX_TI_StereoGestureRecognition,
         OMX_TI_CPCam,
         OMX_TI_StereoVideo,
-        OMX_CaptureHighQualityVideo,
         OMX_TI_SimultaneousSensorsGesture,
         OMX_TI_CaptureVideoLowLatency,
         OMX_TI_HQBurst,
+#endif
+        OMX_CaptureHighQualityVideo,
         OMX_TI_Reprocessing,
+#ifndef OMAP_TUNA
         // Put new entries here so OMX_CamOperatingModeMax always points to
         // the last one
         OMX_TI_CamOperatingModeCount,
         OMX_CamOperatingModeMax = OMX_TI_CamOperatingModeCount - 1,
         OMX_CamOperatingMode = 0x7fffffff
+#else
+        OMX_CamOperatingModeMax = 0x7fffffff
+#endif
 } OMX_CAMOPERATINGMODETYPE;
 
 /**
@@ -690,11 +702,15 @@ typedef enum OMX_IMAGE_EXTFOCUSCONTROLTYPE {
     OMX_IMAGE_FocusControlPortrait, /**< from Xena */
     OMX_IMAGE_FocusControlExtended, /**< from Xena */
     OMX_IMAGE_FocusControlContinousNormal, /**< from Xena */
+#ifndef OMAP_TUNA
     OMX_IMAGE_FocusControlContinousExtended,     /**< from Xena */
     OMX_IMAGE_FocusControlContinousFacePriority,
     OMX_IMAGE_FocusControlContinousRegionPriority,
     OMX_IMAGE_FocusControlContinousPicture,
     OMX_IMAGE_FocusControlTypeMax = 0x7fffffff
+#else
+    OMX_IMAGE_FocusControlContinousExtended     /**< from Xena */
+#endif
 } OMX_IMAGE_EXTFOCUSCONTROLTYPE;
 
 
@@ -1694,9 +1710,12 @@ typedef enum OMX_EXT_EXTRADATATYPE {
     OMX_TI_RangeMappingInfo,            /**< 0x7F000017 Used for Range mapping info provided by Video Decoders */
     OMX_TI_RescalingInfo,               /**< 0x7F000018 Used for width/height rescaling info provided by Video Decoders */
     OMX_TI_WhiteBalanceOverWrite,       /**< 0x7F000019 Used for manual AWB settings */
+#ifndef OMAP_TUNA
     OMX_TI_CPCamData,                   /**< 0x7F00001A Used for cp cam data */
     OMX_TI_H264ESliceDataInfo,          /**< 0x7F00001B */
+#endif
     OMX_TI_DccData,                     /**< 0x7F00001C Used for dcc data overwrite in the file system */
+#ifndef OMAP_TUNA
     OMX_TI_ProfilerData,                /**< 0x7F00001D Used for profiling data */
     OMX_TI_VectShotInfo,                /**< 0x7F00001E Used for vector shot feedback notification */
     OMX_TI_CamReProcMeta,               /**< 0x7F00001F Used for meta data input to camera re-proc function */
@@ -1716,9 +1735,14 @@ typedef enum OMX_EXT_EXTRADATATYPE {
     OMX_TI_ExtraData_AEWBStatistics,    /**< 0x7F00002D Auto Exppsure, white balance buffer and settings for corresponding frame */
     OMX_TI_ExtraData_BSCStatistics,     /**< 0x7F00002E Boundary signal calculator statistics for corresponding frame */
     OMX_TI_ExtraData_AuxiliaryImage,    /**< 0x7F00002F Auxiliary image contains rescaled image at QVGA resolution */
+#endif
     OMX_TI_ExtraData_Count,
+#ifndef OMAP_TUNA
     OMX_TI_ExtraData_Max = OMX_TI_ExtraData_Count - 1,
     OMX_TI_ExtraData_32Bit_Patch = 0x7fffffff
+#else
+    OMX_TI_ExtraData_Max = OMX_TI_ExtraData_Count - 1
+#endif
 } OMX_EXT_EXTRADATATYPE;
 
 /**
@@ -1741,6 +1765,9 @@ typedef struct OMX_CONFIG_EXTRADATATYPE {
     OMX_VERSIONTYPE nVersion;
     OMX_U32               nPortIndex;           /**< The read-only value containing the index of the port */
     OMX_EXT_EXTRADATATYPE eExtraDataType;       /**< Identifies the extra data payload type */
+#ifdef OMAP_TUNA
+    OMX_TI_CAMERAVIEWTYPE eCameraView;
+#endif
     OMX_BOOL bEnable;
 } OMX_CONFIG_EXTRADATATYPE;
 
@@ -2074,7 +2101,9 @@ typedef struct OMX_TI_CONFIG_FOCUSSPOTWEIGHTINGTYPE {
  */
 typedef enum OMX_TI_EXTEXPOSURECONTROLTYPE {
     OMX_TI_ExposureControlVeryLong = OMX_ExposureControlVendorStartUnused + 1,
+#ifndef OMAP_TUNA
     OMX_TI_ExposureControlFacePriority,
+#endif
     OMX_TI_ExposureControlMax = 0x7fffffff
 } OMX_TI_EXTEXPOSURECONTROLTYPE;
 
@@ -2171,8 +2200,10 @@ typedef enum OMX_TI_STEREOFRAMELAYOUTTYPE {
 	OMX_TI_StereoFrameLayout2D,
 	OMX_TI_StereoFrameLayoutTopBottom,
 	OMX_TI_StereoFrameLayoutLeftRight,
+#ifndef OMAP_TUNA
     OMX_TI_StereoFrameLayoutTopBottomSubsample,
     OMX_TI_StereoFrameLayoutLeftRightSubsample,
+#endif
 	OMX_TI_StereoFrameLayoutMax = 0x7FFFFFFF
 } OMX_TI_STEREOFRAMELAYOUTTYPE;
 
@@ -2196,6 +2227,10 @@ typedef struct OMX_TI_FRAMELAYOUTTYPE {
  * extended color format types.
  */
 typedef enum OMX_TI_COLOR_FORMATTYPE {
+#ifdef OMAP_TUNA
+	OMX_TI_COLOR_FormatYUV420PackedSemiPlanarInterlaced =
+	    (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused + 1,
+#endif
 	OMX_TI_COLOR_FormatRawBayer10bitStereo =
 	    OMX_COLOR_FormatVendorStartUnused + 2, /**< 10 bit raw for stereo */
     OMX_TI_ColorFormatTypeMax = 0x7fffffff
@@ -2522,6 +2557,7 @@ typedef struct OMX_TI_CONFIG_EXIF_TAGS {
 	OMX_U16                 usGpsDifferential;
 } OMX_TI_CONFIG_EXIF_TAGS;
 
+#ifndef OMAP_TUNA
 /**
  * The OMX_TI_SENFACING_TYPE enumeration is used to define the
  * sensor facing.
@@ -2531,6 +2567,7 @@ typedef enum OMX_TI_SENFACING_TYPE {
     OMX_TI_SENFACING_BACK,
     OMX_TI_SENFACING_MAX = 0x7FFFFFFF
 }OMX_TI_SENFACING_TYPE;
+#endif
 
 /**
  * Structure used to configure current OMX_TI_SENMOUNT_TYPE
@@ -2544,9 +2581,11 @@ typedef enum OMX_TI_SENFACING_TYPE {
 typedef struct OMX_TI_SENMOUNT_TYPE {
     OMX_U32             nSenId;
     OMX_U32             nRotation;
+#ifndef OMAP_TUNA
     OMX_BOOL                bMirror;
     OMX_BOOL                bFlip;
     OMX_TI_SENFACING_TYPE   eFacing;
+#endif
 }OMX_TI_SENMOUNT_TYPE;
 
 /**
@@ -2599,7 +2638,9 @@ typedef struct OMX_TI_CAPRESTYPE {
 	OMX_U32         nHeightMin; // smallest height supported
 	OMX_U32         nWidthMax;  // biggest width supported
 	OMX_U32         nHeightMax; // biggest height supported
+#ifndef OMAP_TUNA
 	OMX_U32         nMaxResInPixels;// max resolution in pixels
+#endif
 } OMX_TI_CAPRESTYPE;
 
 /**
@@ -2695,34 +2736,36 @@ typedef struct OMX_TI_CAPTYPE {
 	OMX_VERSIONTYPE                 nVersion;
 	OMX_U32                         nPortIndex;
 	OMX_U16                         ulPreviewFormatCount;   // supported preview pixelformat count
-	OMX_COLOR_FORMATTYPE            ePreviewFormats[32];
+	OMX_COLOR_FORMATTYPE    ePreviewFormats[100];
 	OMX_U16                         ulImageFormatCount;     // supported image pixelformat count
-	OMX_COLOR_FORMATTYPE            eImageFormats[32];
+	OMX_COLOR_FORMATTYPE    eImageFormats[100];
 	OMX_TI_CAPRESTYPE               tPreviewResRange;       // supported preview resolution range
+#ifndef OMAP_TUNA
 	OMX_TI_CAPRESTYPE               tRotatedPreviewResRange;     // supported rotated preview resolution range
+#endif
 	OMX_TI_CAPRESTYPE               tImageResRange;         // supported image resolution range
 	OMX_TI_CAPRESTYPE               tThumbResRange;         // supported thumbnail resolution range
 	OMX_U16                         ulWhiteBalanceCount;    // supported whitebalance mode count
-	OMX_WHITEBALCONTROLTYPE         eWhiteBalanceModes[32];
+	OMX_WHITEBALCONTROLTYPE eWhiteBalanceModes[100];
 	OMX_U16                         ulColorEffectCount;     // supported effects count
-	OMX_IMAGEFILTERTYPE             eColorEffects[32];
+	OMX_IMAGEFILTERTYPE     eColorEffects[100];
 	OMX_S32                         xMaxWidthZoom;          // Fixed point value stored as Q16
 	OMX_S32                         xMaxHeightZoom;         // Fixed point value stored as Q16
 	OMX_U16                         ulFlickerCount;         // supported anti-flicker mode count
-	OMX_COMMONFLICKERCANCELTYPE     eFlicker[32];
+	OMX_COMMONFLICKERCANCELTYPE     eFlicker[100];
 	OMX_U16                         ulExposureModeCount;    // supported exposure mode count
-	OMX_EXPOSURECONTROLTYPE         eExposureModes[32];
+	OMX_EXPOSURECONTROLTYPE eExposureModes[100];
 	OMX_BOOL                        bLensDistortionCorrectionSupported;
 	OMX_BOOL                        bISONoiseFilterSupported;
 	OMX_S32                         xEVCompensationMin;     // Fixed point value stored as Q16
 	OMX_S32                         xEVCompensationMax;     // Fixed point value stored as Q16
 	OMX_U32                         nSensitivityMax;        // nSensitivityMax = 100 implies maximum supported equal to "ISO 100"
 	OMX_U16                         ulFocusModeCount;       // supported focus mode count
-	OMX_IMAGE_FOCUSCONTROLTYPE      eFocusModes[32];
+	OMX_IMAGE_FOCUSCONTROLTYPE      eFocusModes[100];
 	OMX_U16                         ulSceneCount;           // supported scene count
-	OMX_SCENEMODETYPE               eSceneModes[64];
+	OMX_SCENEMODETYPE       eSceneModes[100];
 	OMX_U16                         ulFlashCount;           // supported flash modes count
-	OMX_IMAGE_FLASHCONTROLTYPE      eFlashModes[32];
+	OMX_IMAGE_FLASHCONTROLTYPE      eFlashModes[100];
 	OMX_U32                         xFramerateMin;          // Fixed point value stored as Q16
 	OMX_U32                         xFramerateMax;          // Fixed point value stored as Q16
 	OMX_BOOL                        bContrastSupported;
@@ -2735,6 +2778,7 @@ typedef struct OMX_TI_CAPTYPE {
 	OMX_U16                         ulCapVarFPSModesCount;  // supported variable FPS capture modes count
 	OMX_TI_VARFPSTYPE               tCapVarFPSModes[10];
 	OMX_TI_SENMOUNT_TYPE            tSenMounting;
+#ifndef OMAP_TUNA
 	OMX_U16                         ulAutoConvModesCount;   // supported auto convergence modes count
 	OMX_TI_AUTOCONVERGENCEMODETYPE  eAutoConvModes[32];
 	OMX_U16                         ulBracketingModesCount; // supported bracketing modes count
@@ -2745,8 +2789,10 @@ typedef struct OMX_TI_CAPTYPE {
 	OMX_IMAGE_CODINGTYPE            eImageCodingFormat[32];
 	OMX_U16                         uSenNativeResWidth;
 	OMX_U16                         uSenNativeResHeight;
+#endif
         OMX_U16                        ulAlgoAreasFocusCount;
         OMX_U16                        ulAlgoAreasExposureCount;
+#ifndef OMAP_TUNA
     OMX_BOOL                       bAELockSupported;
     OMX_BOOL                       bAWBLockSupported;
     OMX_BOOL                       bAFLockSupported;
@@ -2774,6 +2820,7 @@ typedef struct OMX_TI_CAPTYPE {
     OMX_S16                        nSharpnessMax;
     OMX_S16                        nSaturationMin;
     OMX_S16                        nSaturationMax;
+#endif
 } OMX_TI_CAPTYPE;
 
 
