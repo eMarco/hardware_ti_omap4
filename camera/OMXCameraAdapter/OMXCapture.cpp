@@ -1638,7 +1638,6 @@ status_t OMXCameraAdapter::initInternalBuffers(OMX_U32 portIndex)
 {
     OMX_ERRORTYPE eError = OMX_ErrorNone;
     int index = 0;
-#ifndef OMAP_TUNA
     OMX_TI_PARAM_USEBUFFERDESCRIPTOR bufferdesc;
 
     /* Indicate to Ducati that we're planning to use dynamically-mapped buffers */
@@ -1704,14 +1703,12 @@ status_t OMXCameraAdapter::initInternalBuffers(OMX_U32 portIndex)
     CAMHAL_LOGV("Ducati requested too many (>1) internal buffers");
 
     return -EINVAL;
-#endif
     return NO_ERROR;
 }
 
 status_t OMXCameraAdapter::deinitInternalBuffers(OMX_U32 portIndex)
 {
     OMX_ERRORTYPE eError = OMX_ErrorNone;
-#ifndef OMAP_TUNA
     OMX_TI_PARAM_USEBUFFERDESCRIPTOR bufferdesc;
 
     OMX_INIT_STRUCT_PTR (&bufferdesc, OMX_TI_PARAM_USEBUFFERDESCRIPTOR);
@@ -1736,7 +1733,6 @@ status_t OMXCameraAdapter::deinitInternalBuffers(OMX_U32 portIndex)
     eError = OMX_SetParameter(mCameraAdapterParameters.mHandleComp,
             (OMX_INDEXTYPE) OMX_TI_IndexParamComponentBufferAllocation,
             &bufferalloc);
-#endif
     if (eError!=OMX_ErrorNone) {
         CAMHAL_LOGEB("OMX_SetParameter - %x", eError);
         return -EINVAL;

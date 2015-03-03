@@ -535,11 +535,13 @@ typedef enum OMX_CAMOPERATINGMODETYPE {
         OMX_TI_StereoGestureRecognition,
         OMX_TI_CPCam,
         OMX_TI_StereoVideo,
+#endif
+        OMX_CaptureHighQualityVideo,
+#ifndef OMAP_TUNA
         OMX_TI_SimultaneousSensorsGesture,
         OMX_TI_CaptureVideoLowLatency,
         OMX_TI_HQBurst,
 #endif
-        OMX_CaptureHighQualityVideo,
         OMX_TI_Reprocessing,
 #ifndef OMAP_TUNA
         // Put new entries here so OMX_CamOperatingModeMax always points to
@@ -1710,12 +1712,9 @@ typedef enum OMX_EXT_EXTRADATATYPE {
     OMX_TI_RangeMappingInfo,            /**< 0x7F000017 Used for Range mapping info provided by Video Decoders */
     OMX_TI_RescalingInfo,               /**< 0x7F000018 Used for width/height rescaling info provided by Video Decoders */
     OMX_TI_WhiteBalanceOverWrite,       /**< 0x7F000019 Used for manual AWB settings */
-#ifndef OMAP_TUNA
     OMX_TI_CPCamData,                   /**< 0x7F00001A Used for cp cam data */
     OMX_TI_H264ESliceDataInfo,          /**< 0x7F00001B */
-#endif
     OMX_TI_DccData,                     /**< 0x7F00001C Used for dcc data overwrite in the file system */
-#ifndef OMAP_TUNA
     OMX_TI_ProfilerData,                /**< 0x7F00001D Used for profiling data */
     OMX_TI_VectShotInfo,                /**< 0x7F00001E Used for vector shot feedback notification */
     OMX_TI_CamReProcMeta,               /**< 0x7F00001F Used for meta data input to camera re-proc function */
@@ -1728,6 +1727,7 @@ typedef enum OMX_EXT_EXTRADATATYPE {
     OMX_TI_SEIInfoFrame2,               /**< 0x7F000026 Used for SEI message to be provided by video decoders*/
     OMX_TI_VUIInfoFrame1,               /**< 0x7F000027 Used for VUI message to be provided by video decoders */
     OMX_TI_VUIInfoFrame2,               /**< 0x7F000028 Used for VUI message to be provided by video decoders */
+#ifndef OMAP_TUNA
     OMX_TI_FaceDetectionRaw,            /**< 0x7F000029 Face detect data without face tracking calculations */
     OMX_TI_HMSGamma,                    /**< 0x7F00002A Histogram Matched for Stereo Gamma table */
     OMX_TI_ImagePyramid,                /**< 0x7F00002B Describe image piramid sizes for each level of pyramid */
@@ -1737,12 +1737,8 @@ typedef enum OMX_EXT_EXTRADATATYPE {
     OMX_TI_ExtraData_AuxiliaryImage,    /**< 0x7F00002F Auxiliary image contains rescaled image at QVGA resolution */
 #endif
     OMX_TI_ExtraData_Count,
-#ifndef OMAP_TUNA
     OMX_TI_ExtraData_Max = OMX_TI_ExtraData_Count - 1,
     OMX_TI_ExtraData_32Bit_Patch = 0x7fffffff
-#else
-    OMX_TI_ExtraData_Max = OMX_TI_ExtraData_Count - 1
-#endif
 } OMX_EXT_EXTRADATATYPE;
 
 /**
@@ -2745,9 +2741,9 @@ typedef struct OMX_TI_CAPTYPE {
 	OMX_BOOL                        bRawJpegSupported;      // Flag showing if the Raw + Jpeg issupported
 	OMX_U16                         ulImageCodingFormatCount;
 	OMX_IMAGE_CODINGTYPE            eImageCodingFormat[32];
+#endif
 	OMX_U16                         uSenNativeResWidth;
 	OMX_U16                         uSenNativeResHeight;
-#endif
         OMX_U16                        ulAlgoAreasFocusCount;
         OMX_U16                        ulAlgoAreasExposureCount;
 #ifndef OMAP_TUNA

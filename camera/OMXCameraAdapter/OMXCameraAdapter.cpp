@@ -1015,7 +1015,6 @@ status_t OMXCameraAdapter::setupTunnel(uint32_t SliceHeight, uint32_t EncoderHan
         CAMHAL_LOGEB("OMX_SetParameter OMX_IndexParamPortDefinition Error- %x", eError);
     }
 
-#ifndef OMAP_TUNA
     //Slice  Configuration
     OMX_TI_PARAM_VTCSLICE VTCSlice;
     OMX_INIT_STRUCT_PTR(&VTCSlice, OMX_TI_PARAM_VTCSLICE);
@@ -1030,7 +1029,6 @@ status_t OMXCameraAdapter::setupTunnel(uint32_t SliceHeight, uint32_t EncoderHan
         CAMHAL_LOGEB("OMX_SetParameter on OMX_TI_IndexParamVtcSlice returned error: 0x%x", eError);
         return BAD_VALUE;
     }
-#endif
 
     eError = OMX_SetupTunnel(mCameraAdapterParameters.mHandleComp,
             mCameraAdapterParameters.mVideoPortIndex, encoderHandle, 0);
