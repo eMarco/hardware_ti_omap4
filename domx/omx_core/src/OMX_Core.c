@@ -90,24 +90,19 @@ char   *tComponentName[MAXCOMP][MAX_ROLES] =
       "video_decoder.mpeg2",
       "video_decoder.svc",
       "video_decoder.sorspk",
-#ifndef OMAP_TUNA
-      "video_decoder.mjpeg",
-#endif
-	  NULL},
+      "video_decoder.mjpeg", NULL},
     { "OMX.TI.DUCATI1.VIDEO.DECODER.secure",
       "video_decoder.mpeg4",
       "video_decoder.avc",
       "video_decoder.h263", NULL },
     { "OMX.TI.DUCATI1.VIDEO.H264E",
       "video_encoder.avc", NULL },
-#ifndef OMAP_TUNA
     { "OMX.TI.DUCATI1.VIDEO.H264E.secure",
       "video_encoder.avc", NULL },
     { "OMX.TI.DUCATI1.VIDEO.H264SVCE",
       "video_encoder.svc", NULL },
     { "OMX.TI.DUCATI1.VIDEO.VC1E",
       "video_encoder.wmv", NULL },
-#endif
     { "OMX.TI.DUCATI1.VIDEO.MPEG4E",
       "video_encoder.mpeg4",
       "video_encoder.h263", NULL },
