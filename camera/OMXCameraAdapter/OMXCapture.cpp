@@ -198,10 +198,12 @@ status_t OMXCameraAdapter::setParametersCapture(const android::CameraParameters 
         mPendingCaptureSettings |= SetBurstExpBracket;
     } else {
         // always set queued shot config in CPCAM mode
+#ifndef OMAP_TUNA
         if (mCapMode == OMXCameraAdapter::CP_CAM) {
             mExposureBracketMode = OMX_BracketVectorShot;
             mPendingCaptureSettings |= SetBurstExpBracket;
         }
+#endif
         // if bracketing was previously set...we set again before capturing to clear
         if (mExposureBracketingValidEntries) {
             mPendingCaptureSettings |= SetBurstExpBracket;

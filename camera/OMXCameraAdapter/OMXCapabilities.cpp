@@ -1911,18 +1911,14 @@ status_t OMXCameraAdapter::insertVideoSnapshotSupported(CameraProperties::Proper
 
     LOG_FUNCTION_NAME;
 
-#ifndef OMAP_TUNA
     if (caps.bStillCapDuringVideoSupported)
     {
         params->set(CameraProperties::VIDEO_SNAPSHOT_SUPPORTED, android::CameraParameters::TRUE);
     }
     else
     {
-#endif
         params->set(CameraProperties::VIDEO_SNAPSHOT_SUPPORTED, android::CameraParameters::FALSE);
-#ifndef OMAP_TUNA
     }
-#endif
 
     LOG_FUNCTION_NAME_EXIT;
 

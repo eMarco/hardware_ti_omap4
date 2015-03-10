@@ -245,13 +245,14 @@ status_t OMXCameraAdapter::setParametersAlgo(const android::CameraParameters &pa
                 CAMHAL_LOGDB("Manual Convergence  %s", valManualStr);
             }
         }
-
+#ifndef OMAP_TUNA
         //Set Mechanical Misalignment Correction
         valstr = params.get(TICameraParameters::KEY_MECHANICAL_MISALIGNMENT_CORRECTION);
         if ( valstr != NULL ) {
             setMechanicalMisalignmentCorrection(strcmp(valstr, android::CameraParameters::TRUE) == 0);
             CAMHAL_LOGDB("Mechanical Misalignment Correction %s", valstr);
         }
+#endif
     }
 #endif
 

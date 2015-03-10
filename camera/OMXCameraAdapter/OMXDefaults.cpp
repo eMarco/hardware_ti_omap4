@@ -92,6 +92,7 @@ const char * OMXCameraAdapter::DEFAULT_MECHANICAL_MISALIGNMENT_CORRECTION_MODE =
 #endif
 const char OMXCameraAdapter::DEFAULT_EXIF_MAKE[] = "default_make";
 const char OMXCameraAdapter::DEFAULT_EXIF_MODEL[] = "default_model";
+const char * OMXCameraAdapter::DEFAULT_VIDEO_SNAPSHOT_SUPPORTED = android::CameraParameters::TRUE;
 
 } // namespace Camera
 } // namespace Ti
