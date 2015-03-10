@@ -704,15 +704,11 @@ typedef enum OMX_IMAGE_EXTFOCUSCONTROLTYPE {
     OMX_IMAGE_FocusControlPortrait, /**< from Xena */
     OMX_IMAGE_FocusControlExtended, /**< from Xena */
     OMX_IMAGE_FocusControlContinousNormal, /**< from Xena */
-#ifndef OMAP_TUNA
     OMX_IMAGE_FocusControlContinousExtended,     /**< from Xena */
     OMX_IMAGE_FocusControlContinousFacePriority,
     OMX_IMAGE_FocusControlContinousRegionPriority,
     OMX_IMAGE_FocusControlContinousPicture,
     OMX_IMAGE_FocusControlTypeMax = 0x7fffffff
-#else
-    OMX_IMAGE_FocusControlContinousExtended     /**< from Xena */
-#endif
 } OMX_IMAGE_EXTFOCUSCONTROLTYPE;
 
 
@@ -2799,7 +2795,9 @@ typedef struct OMX_TI_CAPTYPE {
     OMX_TI_STEREOFRAMELAYOUTTYPE   eCapFrameLayout[16];
     OMX_BOOL                       bVideoNoiseFilterSupported;
     OMX_BOOL                       bVideoStabilizationSupported;
+#endif
     OMX_BOOL                       bStillCapDuringVideoSupported;
+#ifndef OMAP_TUNA
     OMX_BOOL                       bMechanicalMisalignmentSupported;
     OMX_BOOL                       bFacePrioritySupported;
     OMX_BOOL                       bRegionPrioritySupported;
