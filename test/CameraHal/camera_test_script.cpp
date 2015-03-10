@@ -16,37 +16,30 @@
 #include <binder/IServiceManager.h>
 #include <cutils/properties.h>
 #include <camera/CameraParameters.h>
-#include <camera/ShotParameters.h>
 
 #include <sys/wait.h>
 
 #include "camera_test.h"
-#include "camera_test_surfacetexture.h"
-#ifdef ANDROID_API_JB_OR_LATER
-#include "camera_test_bufferqueue.h"
-#endif
 
 using namespace android;
 
 extern bool stopScript;
 extern bool hardwareActive;
 extern sp<Camera> camera;
-extern sp<BufferSourceThread> bufferSourceOutputThread;
-extern sp<BufferSourceInput> bufferSourceInput;
 extern CameraParameters params;
-extern ShotParameters shotParams;
-extern bool shotConfigFlush;
-extern bool streamCapture;
 extern bool recordingMode;
 extern int camera_index;
 extern int rotation;
-extern int previewRotation;
-extern const param_Array captureSize[];
-extern const param_Array VcaptureSize[];
+extern const preview_size previewSize [];
+extern const Vcapture_size VcaptureSize [];
+extern const capture_Size captureSize[];
 extern const outformat outputFormat[];
 extern const video_Codecs videoCodecs[];
 extern const audio_Codecs audioCodecs[];
 extern const V_bitRate VbitRate[];
+extern const fps_ranges fpsRanges[];
+extern const fpsConst_Ranges fpsConstRanges[];
+extern const fpsConst_RangesSec fpsConstRangesSec[];
 extern const Zoom zoom [];
 extern int previewSizeIDX;
 extern bool reSizePreview;
@@ -75,73 +68,23 @@ extern int zoomIDX;
 extern int brightness;
 extern int saturation;
 extern int fpsRangeIdx;
-extern int numAntibanding;
-extern int numEffects;
-extern int numawb;
-extern int numExposureMode;
-extern int numscene;
-extern int numisoMode;
-extern int numflash;
-extern int numcaptureSize;
-extern int numVcaptureSize;
-extern int numpreviewSize;
-extern int numthumbnailSize;
-extern int numfocus;
-extern int numpreviewFormat;
-extern int numpictureFormat;
-extern int nummodevalues;
-extern int numLay;
-extern int numCLay;
-extern int constCnt;
-extern int rangeCnt;
-extern int * constFramerate;
-extern int frameRateIDX;
-extern int fpsRangeIdx;
-extern int stereoLayoutIDX;
-extern int stereoCapLayoutIDX;
-extern int expBracketIdx;
-int resol_index = 0;
-int a = 0;
-extern char * vstabstr;
-extern char * vnfstr;
-extern char * zoomstr;
-extern char * smoothzoomstr;
-extern char * videosnapshotstr;
-extern char ** antiband;
-extern char **effectss;
-extern bool firstTime;
-extern char **exposureMode;
-extern char **awb;
-extern char **scene;
-extern char ** isoMode;
-extern char ** modevalues;
-extern char **focus;
-extern char **flash;
-extern char **previewFormatArray;
-extern char **pictureFormatArray;
-extern char ** fps_const_str;
-extern char ** fps_range_str;
-extern char ** rangeDescription;
-extern param_Array ** capture_Array;
-extern param_Array ** Vcapture_Array;
-extern param_Array ** preview_Array;
-extern param_Array ** thumbnail_Array;
 extern timeval autofocus_start, picture_start;
 extern const char *cameras[];
 extern double latitude;
 extern double degree_by_step;
 extern double longitude;
 extern double altitude;
-extern char output_dir_path[];
-extern char images_dir_path[];
+extern char dir_path[80];
 extern int AutoConvergenceModeIDX;
 extern const char *autoconvergencemode[];
-extern int numCamera;
-extern bool stereoMode;
+extern const char *manualconvergencevalues[];
+extern const int ManualConvergenceDefaultValueIDX;
+extern size_t length_cam;
 extern char script_name[];
+extern int restartCount;
+extern bool bLogSysLinkTrace;
 extern int bufferStarvationTest;
 extern size_t length_previewSize;
-extern size_t length_thumbnailSize;
 extern size_t lenght_Vcapture_size;
 extern size_t length_outformat;
 extern size_t length_capture_Size;
@@ -152,67 +95,8 @@ extern size_t length_Zoom;
 extern size_t length_fps_ranges;
 extern size_t length_fpsConst_Ranges;
 extern size_t length_fpsConst_RangesSec;
-extern int platformID;
-extern char **stereoLayout;
-extern char **stereoCapLayout;
-extern void getSizeParametersFromCapabilities();
-extern int exposure_mode;
-int manE = 0;
-extern int manualExp ;
-extern int manualExpMin ;
-extern int manualExpMax ;
-int manG = 0;
-extern int manualGain ;
-extern int manualGainMin ;
-extern int manualGainMax ;
-int manC = 0;
-extern int manualConv ;
-extern int manualConvMin ;
-extern int manualConvMax ;
-extern bool faceDetectToggle;
-extern unsigned int burstCount;
-extern int iterationCount;
-extern bool iterationPrint;
 
-/** Buffer source reset */
-extern bool bufferSourceInputReset;
-extern bool bufferSourceOutputReset;
-
-void trim_script_cmd(char *cmd) {
-    char *nl, *cr;
-
-    // first remove all carriage return symbols
-    while ( NULL != (cr = strchr(cmd, '\r'))) {
-        for (char *c = cr; '\0' != *c; c++) {
-            *c = *(c+1);
-        }
-    }
-    if (iterationPrint) {
-        printf("\n==============\n");
-        printf("IterationCount: %d", iterationCount);
-        printf("\n==============\n");
-        iterationPrint = false;
-    }
-    // Iteration Counter
-    while ( NULL != (nl = strchr(cmd, '\n')) || NULL != (nl = strchr(cmd, '\r\n'))) {
-            iterationPrint = true;
-            iterationCount ++;
-            break;
-            }
-
-    // then remove all single line feed symbols
-    while ( NULL != (nl = strchr(cmd, '\n'))) {
-        if (*nl == *(nl+1)) {
-            // two or more concatenated newlines:
-            // end of script found
-            break;
-        }
-        // clip the newline
-        for (char *c = nl; '\0' != *c; c++) {
-            *c = *(c+1);
-        }
-    }
-}
+static const String16 processName("camera_test");
 
 int execute_functional_script(char *script) {
     char *cmd, *ctx, *cycle_cmd, *temp_cmd;
@@ -222,14 +106,9 @@ int execute_functional_script(char *script) {
     int cycleCounter = 1;
     int tLen = 0;
     unsigned int iteration = 0;
-    bool zoomtoggle = false;
-    bool smoothzoomtoggle = false;
     status_t ret = NO_ERROR;
-    //int frameR = 20;
-    int frameRConst = 0;
-    int frameRRange = 0;
-    struct CameraInfo cameraInfo;
-    bool queueEmpty = true;
+    int frameR = 20;
+    int frameRateIndex = 0;
 
     LOG_FUNCTION_NAME;
 
@@ -238,7 +117,6 @@ int execute_functional_script(char *script) {
     cmd = strtok_r((char *) script, DELIMITER, &ctx);
 
     while ( NULL != cmd && (stopScript == false)) {
-        trim_script_cmd(cmd);
         id = cmd[0];
         printf("Full Command: %s \n", cmd);
         printf("Command: %c \n", cmd[0]);
@@ -351,25 +229,32 @@ int execute_functional_script(char *script) {
                 break;
 
             case '2':
+                stopPreview();
+
                 if ( recordingMode ) {
-                    stopRecording();
-                    stopPreview();
-                    closeRecorder();
+
                     camera->disconnect();
                     camera.clear();
-                    camera = Camera::connect(camera_index);
+                    stopRecording();
+                    closeRecorder();
+
+                    camera = Camera::connect(camera_index,
+                            processName,
+                            Camera::USE_CALLING_UID);
                       if ( NULL == camera.get() ) {
                           sleep(1);
-                          camera = Camera::connect(camera_index);
+                          camera = Camera::connect(camera_index,
+                                  processName,
+                                  Camera::USE_CALLING_UID);
+
                           if ( NULL == camera.get() ) {
                               return -1;
                           }
                       }
                       camera->setListener(new CameraHandler());
                       camera->setParameters(params.flatten());
+
                       recordingMode = false;
-                } else {
-                    stopPreview();
                 }
 
                 break;
@@ -383,25 +268,40 @@ int execute_functional_script(char *script) {
 
                 break;
 
-            case 'V':
-                previewRotation = atoi(cmd + 1);
-                params.set(KEY_SENSOR_ORIENTATION, previewRotation);
-
-                if ( hardwareActive )
-                    camera->setParameters(params.flatten());
-
-                break;
-
             case '4':
+            {
                 printf("Setting resolution...");
-
-                a = checkSupportedParamScriptResol(preview_Array, numpreviewSize, cmd, &resol_index);
-                if (a > -1) {
-                    params.setPreviewSize(preview_Array[resol_index]->width, preview_Array[resol_index]->height);
-                    previewSizeIDX = resol_index;
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
+                int width, height;
+                for(i = 0; i < length_previewSize ; i++)
+                {
+                    if( strcmp((cmd + 1), previewSize[i].desc) == 0)
+                    {
+                        width = previewSize[i].width;
+                        height = previewSize[i].height;
+                        previewSizeIDX = i;
+                        break;
+                    }
                 }
+
+                if (i == length_previewSize )   //if the resolution is not in the supported ones
+                {
+                    char *res = NULL;
+                    res = strtok(cmd + 1, "x");
+                    width = atoi(res);
+                    res = strtok(NULL, "x");
+                    height = atoi(res);
+                }
+
+                if ( NULL != params.get(KEY_STEREO_CAMERA) ) {
+                    if ( strcmp(params.get(KEY_STEREO_CAMERA), "true") == 0 ) {
+                        height *=2;
+                    }
+                }
+
+                printf("Resolution: %d x %d\n", width, height);
+                params.setPreviewSize(width, height);
+                reSizePreview = true;
+
                 if ( hardwareActive && previewRunning ) {
                     camera->stopPreview();
                     camera->setParameters(params.flatten());
@@ -409,51 +309,23 @@ int execute_functional_script(char *script) {
                 } else if ( hardwareActive ) {
                     camera->setParameters(params.flatten());
                 }
+
                 break;
-
+            }
             case '5':
-                if( strcmp((cmd + 1), "MAX_CAPTURE_SIZE") == 0) {
-                    resol_index = 0;
-                    for (int i=0; i<numcaptureSize; i++) {
-                        if ((capture_Array[resol_index]->width * capture_Array[resol_index]->height) < (capture_Array[i]->width * capture_Array[i]->height)) {
-                            resol_index = i;
-                        }
-                    }
-                    if ((0 < capture_Array[resol_index]->width) && (0 < capture_Array[resol_index]->height)) {
-                        params.setPictureSize(capture_Array[resol_index]->width, capture_Array[resol_index]->height);
-                        captureSizeIDX = resol_index;
-                        printf("Capture Size set: %dx%d\n", capture_Array[resol_index]->width, capture_Array[resol_index]->height);
-                    } else {
-                        printf("\nCapture size is 0!\n");
-                    }
-                } else {
-                    a = checkSupportedParamScriptResol(capture_Array, numcaptureSize, cmd, &resol_index);
-                    if (camera_index != 2) {
-                        if (a > -1) {
-                            params.setPictureSize(capture_Array[resol_index]->width, capture_Array[resol_index]->height);
-                            captureSizeIDX = resol_index;
-                        } else {
-                            printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                        }
-                    } else {
-                        int widthC, heightC;
-                        char *resC = NULL;
-                        resC = strtok(cmd + 1, "x");
-                        widthC = atoi(resC);
-                        resC = strtok(NULL, "x");
-                        heightC = atoi(resC);
-                        params.setPictureSize(widthC,heightC);
-                    a = checkSupportedParamScriptResol(capture_Array, numcaptureSize,
-                                                       widthC, heightC, &resol_index);
-                    if (a > -1) captureSizeIDX = resol_index;
-                    }
 
-                    if ( hardwareActive ) {
-                        camera->setParameters(params.flatten());
-                    }
+                for (i = 0; i < length_capture_Size; i++) {
+                    if ( strcmp((cmd + 1), captureSize[i].name) == 0)
+                        break;
                 }
 
-                requestBufferSourceReset();
+                if (  i < length_capture_Size ) {
+                    params.setPictureSize(captureSize[i].width, captureSize[i].height);
+                    captureSizeIDX = i;
+                }
+
+                if ( hardwareActive )
+                    camera->setParameters(params.flatten());
 
                 break;
 
@@ -501,13 +373,7 @@ int execute_functional_script(char *script) {
                 break;
 
             case '8':
-
-                a = checkSupportedParamScript(awb, numawb, cmd);
-                if (a > -1) {
-                    params.set(params.KEY_WHITE_BALANCE, (cmd + 1));
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
+                params.set(params.KEY_WHITE_BALANCE, (cmd + 1));
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
@@ -542,37 +408,16 @@ int execute_functional_script(char *script) {
             break;
 
             case '~':
-
-                a = checkSupportedParamScript(previewFormatArray, numpreviewFormat, cmd);
-                if (a > -1) {
-                    params.setPreviewFormat(cmd + 1);
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
-
+                params.setPreviewFormat(cmd + 1);
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
 
                 break;
 
             case '$':
-
-                a = checkSupportedParamScript(pictureFormatArray, numpictureFormat, cmd);
-                if (a > -1) {
-                    params.setPictureFormat(cmd + 1);
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
-
-                queueEmpty = true;
-                if ( bufferSourceOutputThread.get() ) {
-                    if ( 0 < bufferSourceOutputThread->hasBuffer() ) {
-                        queueEmpty = false;
-                    }
-                }
-                if ( hardwareActive && queueEmpty ) {
+                params.setPictureFormat(cmd + 1);
+                if ( hardwareActive )
                     camera->setParameters(params.flatten());
-                }
 
                 break;
             case '-':
@@ -589,10 +434,14 @@ int execute_functional_script(char *script) {
 
             case 'A':
                 camera_index=atoi(cmd+1);
-                camera_index %= numCamera;
+           //     camera_index %= ARRAY_SIZE(cameras);
+                camera_index %= length_cam;
+                if ( camera_index == 2)
+                    params.set(KEY_STEREO_CAMERA, "true");
+                else
+                    params.set(KEY_STEREO_CAMERA, "false");
 
                 printf("%s selected.\n", cameras[camera_index]);
-                firstTime = true;
 
                 if ( hardwareActive ) {
                     stopPreview();
@@ -602,6 +451,11 @@ int execute_functional_script(char *script) {
                     closeCamera();
                     openCamera();
                 }
+
+                if (camera_index == 0) params.setPreviewFrameRate(30);
+                  else params.setPreviewFrameRate(27);
+
+
                 break;
 
             case 'a':
@@ -622,59 +476,17 @@ int execute_functional_script(char *script) {
                 break;
 
             case 'l':
-                a = checkSupportedParamScriptResol(Vcapture_Array, numVcaptureSize, cmd, &resol_index);
-                if (a > -1) {
-                    VcaptureSizeIDX = resol_index;
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
-                break;
-
             case 'L':
-                if(stereoMode)
+                for(i = 0; i < lenght_Vcapture_size; i++)
                 {
-                    a = checkSupportedParamScriptLayout(stereoLayout, numLay, cmd, &stereoLayoutIDX);
-                    if (a > -1) {
-                        params.set(KEY_S3D_PRV_FRAME_LAYOUT, cmd + 1);
-                    } else {
-                        printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                    }
-
-
-                    getSizeParametersFromCapabilities();
-                    if (hardwareActive && previewRunning) {
-                        stopPreview();
-                        camera->setParameters(params.flatten());
-                        startPreview();
-                    } else if (hardwareActive) {
-                        camera->setParameters(params.flatten());
+                    if( strcmp((cmd + 1), VcaptureSize[i].desc) == 0)
+                    {
+                        VcaptureSizeIDX = i;
+                        printf("Video Capture Size: %s\n", VcaptureSize[i].desc);
+                        break;
                     }
                 }
                 break;
-
-
-            case '.':
-                if(stereoMode)
-                {
-                    a = checkSupportedParamScriptLayout(stereoCapLayout, numCLay, cmd, &stereoCapLayoutIDX);
-                    if (a > -1) {
-                        params.set(KEY_S3D_CAP_FRAME_LAYOUT_VALUES, cmd + 1);
-                    } else {
-                        printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                    }
-
-
-                    getSizeParametersFromCapabilities();
-                    if (hardwareActive && previewRunning) {
-                        stopPreview();
-                        camera->setParameters(params.flatten());
-                        startPreview();
-                    } else if (hardwareActive) {
-                        camera->setParameters(params.flatten());
-                    }
-                }
-                break;
-
             case ']':
                 for(i = 0; i < length_V_bitRate; i++)
                 {
@@ -687,20 +499,32 @@ int execute_functional_script(char *script) {
                 }
                 break;
             case ':':
-
-                a = checkSupportedParamScriptResol(thumbnail_Array, numthumbnailSize, cmd, &resol_index);
-                if (a > -1) {
-                    params.set(CameraParameters::KEY_JPEG_THUMBNAIL_WIDTH, thumbnail_Array[resol_index]->width);
-                    params.set(CameraParameters::KEY_JPEG_THUMBNAIL_HEIGHT,thumbnail_Array[resol_index]->height);
-                    thumbSizeIDX = resol_index;
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
+                int width, height;
+                for(i = 0; i < length_previewSize ; i++)
+                {
+                    if( strcmp((cmd + 1), previewSize[i].desc) == 0)
+                    {
+                        width = previewSize[i].width;
+                        height = previewSize[i].height;
+                        thumbSizeIDX = i;
+                        break;
+                    }
                 }
 
-                if ( hardwareActive ) {
+                if (i == length_previewSize )   //if the resolution is not in the supported ones
+                {
+                    char *res = NULL;
+                    res = strtok(cmd + 1, "x");
+                    width = atoi(res);
+                    res = strtok(NULL, "x");
+                    height = atoi(res);
+                }
+
+                params.set(CameraParameters::KEY_JPEG_THUMBNAIL_WIDTH, width);
+                params.set(CameraParameters::KEY_JPEG_THUMBNAIL_HEIGHT, height);
+
+                if ( hardwareActive )
                     camera->setParameters(params.flatten());
-                }
-
 
                 break;
 
@@ -746,8 +570,6 @@ int execute_functional_script(char *script) {
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
 
-                requestBufferSourceReset();
-
                 break;
 
             case 'K':
@@ -758,29 +580,15 @@ int execute_functional_script(char *script) {
                 break;
 
             case 'F':
-                if ( hardwareActive ) {
-                    camera->sendCommand(CAMERA_CMD_START_FACE_DETECTION, 0, 0);
-                    faceDetectToggle = true;
-                }
-
-                break;
-
-            case 'I':
-                params.set(KEY_AF_TIMEOUT, (cmd + 1));
-
                 if ( hardwareActive )
-                    camera->setParameters(params.flatten());
+                    camera->sendCommand(CAMERA_CMD_START_FACE_DETECTION, 0, 0);
 
                 break;
 
             case 'T':
 
-                if ( hardwareActive ) {
+                if ( hardwareActive )
                     camera->sendCommand(CAMERA_CMD_STOP_FACE_DETECTION, 0, 0);
-                    faceDetectToggle = false;
-                }
-
-                break;
 
             case 'O':
                 params.set(KEY_GLBCE, (cmd+1));
@@ -792,53 +600,17 @@ int execute_functional_script(char *script) {
             case 'u':
                 // HQ should always be in ldc-nsf
                 // if not HQ, then return the ipp to its previous state
-                if ( !strcmp((cmd + 1), "high-quality") ) {
+                if( !strcmp(capture[capture_mode], "high-quality") ) {
                     ippIDX_old = ippIDX;
                     ippIDX = 3;
                     params.set(KEY_IPP, ipp_mode[ippIDX]);
-                    params.set(CameraParameters::KEY_RECORDING_HINT, CameraParameters::FALSE);
-                    previewRotation = 0;
-                    params.set(KEY_SENSOR_ORIENTATION, previewRotation);
-                } else if ( !strcmp((cmd + 1), "video-mode") ) {
-                    params.set(CameraParameters::KEY_RECORDING_HINT, CameraParameters::TRUE);
-                    camera->getCameraInfo(camera_index, &cameraInfo);
-                    previewRotation = ((360-cameraInfo.orientation)%360);
-                    if (previewRotation >= 0 || previewRotation <=360) {
-                        params.set(KEY_SENSOR_ORIENTATION, previewRotation);
-                    }
-                    printf("previewRotation: %d\n", previewRotation);
                 } else {
                     ippIDX = ippIDX_old;
-                    params.set(CameraParameters::KEY_RECORDING_HINT, CameraParameters::FALSE);
-                    previewRotation = 0;
-                    params.set(KEY_SENSOR_ORIENTATION, previewRotation);
-                }
-                a = checkSupportedParamScript(modevalues, nummodevalues, cmd);
-                if (a > -1) {
-                    params.set(KEY_MODE, (cmd + 1));
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
                 }
 
-                if ( hardwareActive ) {
-                    if (previewRunning) {
-                        stopPreview();
-                    }
+                params.set(KEY_MODE, (cmd + 1));
+                if ( hardwareActive )
                     camera->setParameters(params.flatten());
-                    // Get parameters from capabilities for the new capture mode
-                    params = camera->getParameters();
-                    getSizeParametersFromCapabilities();
-                    getParametersFromCapabilities();
-                    // Set framerate 30fps and 12MP capture resolution if available for the new capture mode.
-                    // If not available set framerate and capture mode under index 0 from fps_const_str and capture_Array.
-                    frameRateIDX = getDefaultParameter("30000,30000", constCnt, fps_const_str);
-                    captureSizeIDX = getDefaultParameterResol("12MP", numcaptureSize, capture_Array);
-                    params.set(CameraParameters::KEY_PREVIEW_FPS_RANGE, fps_const_str[frameRateIDX]);
-                    params.setPictureSize(capture_Array[captureSizeIDX]->width, capture_Array[captureSizeIDX]->height);
-                    camera->setParameters(params.flatten());
-                }
-
-                requestBufferSourceReset();
 
                 break;
 
@@ -848,36 +620,6 @@ int execute_functional_script(char *script) {
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
-
-                break;
-
-            case 'H':
-
-                setDefaultExpGainPreset(shotParams, atoi(cmd + 1));
-                break;
-
-
-            case 'n':
-
-            switch (*(cmd + 1)) {
-                case 0:
-                shotConfigFlush = false;
-                    break;
-                case 1:
-                shotConfigFlush = true;
-                    break;
-                default:
-                printf ("Mangling flush shot config command: \"%s\"\n", (cmd + 1));
-                    break;
-            }
-
-            updateShotConfigFlushParam();
-
-            break;
-
-            case '?':
-
-                setExpGainPreset(shotParams, cmd + 1, true, PARAM_EXP_BRACKET_PARAM_NONE, shotConfigFlush);
 
                 break;
 
@@ -899,8 +641,7 @@ int execute_functional_script(char *script) {
 
             case '#':
 
-                params.set(KEY_TI_BURST, atoi(cmd + 1));
-                burstCount = atoi(cmd + 1);
+                params.set(KEY_BURST, atoi(cmd + 1));
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
@@ -908,13 +649,7 @@ int execute_functional_script(char *script) {
                 break;
 
             case 'J':
-
-                a = checkSupportedParamScript(flash, numflash, cmd);
-                if (a > -1) {
-                    params.set(CameraParameters::KEY_FLASH_MODE, (cmd + 1));
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
+                params.set(CameraParameters::KEY_FLASH_MODE, (cmd+1));
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
@@ -922,54 +657,25 @@ int execute_functional_script(char *script) {
                 break;
 
             case 'w':
+                params.set(params.KEY_SCENE_MODE, (cmd + 1));
 
-                a = checkSupportedParamScript(scene, numscene, cmd);
-                if (a > -1) {
-                    params.set(params.KEY_SCENE_MODE, (cmd + 1));
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
 
                 break;
 
             case 'B' :
-                if(strcmp(vnfstr, "true") == 0) {
-                    if (strcmp(cmd + 1, "1") == 0) {
-                        trySetVideoNoiseFilter(true);
-                    }
-                    else if (strcmp(cmd + 1, "0") == 0){
-                        trySetVideoNoiseFilter(false);
-                    }
-                } else {
-                    trySetVideoNoiseFilter(false);
-                    printf("\n VNF is not supported \n\n");
-                }
+                params.set(KEY_VNF, (cmd + 1));
 
-                if ( hardwareActive ) {
+                if ( hardwareActive )
                     camera->setParameters(params.flatten());
-                }
-                break;
 
 
             case 'C' :
+                params.set(KEY_VSTAB, (cmd + 1));
 
-                if (strcmp(vstabstr, "true") == 0) {
-                    if (strcmp(cmd + 1, "1") == 0) {
-                        trySetVideoStabilization(true);
-                    } else if (strcmp(cmd + 1, "0") == 0) {
-                        trySetVideoStabilization(false);
-                    } else {
-                        printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                    }
-                } else {
-                    printf("\nNot supported parameter vstab from sensor %d\n\n", camera_index);
-                }
-
-                if ( hardwareActive ) {
+                if ( hardwareActive )
                     camera->setParameters(params.flatten());
-                }
                 break;
 
             case 'D':
@@ -985,11 +691,7 @@ int execute_functional_script(char *script) {
 
             case 'i':
                 iso_mode = atoi(cmd + 1);
-                if (iso_mode < numisoMode) {
-                    params.set(KEY_ISO, isoMode[iso_mode]);
-                } else {
-                    printf("\nNot supported parameter %s for iso mode from sensor %d\n\n", cmd + 1, camera_index);
-                }
+                params.set(KEY_ISO, iso_mode);
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
@@ -1028,59 +730,31 @@ int execute_functional_script(char *script) {
                 break;
 
             case 'z':
-                zoomtoggle = false;
-
-                if(strcmp(zoomstr, "true") == 0) {
-                    for(i = 0; i < length_Zoom; i++) {
-                        if( strcmp((cmd + 1), zoom[i].zoom_description) == 0) {
-                            zoomIDX = i;
-                            zoomtoggle = true;
-                            break;
-                        }
-                    }
-
-                    if (!zoomtoggle) {
-                        printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                    }
-
-
-                    params.set(CameraParameters::KEY_ZOOM, zoom[zoomIDX].idx);
-
-                    if ( hardwareActive ) {
-                        camera->setParameters(params.flatten());
-                    }
-                }
-
             case 'Z':
-                smoothzoomtoggle = false;
 
-                if(strcmp(smoothzoomstr, "true") == 0) {
-                    for(i = 0; i < length_Zoom; i++) {
-                        if( strcmp((cmd + 1), zoom[i].zoom_description) == 0) {
-                            zoomIDX = i;
-                            smoothzoomtoggle = true;
-                            break;
-                        }
-                    }
+#if defined(OMAP_ENHANCEMENT) && defined(TARGET_OMAP3)
+                params.set(CameraParameters::KEY_ZOOM, atoi(cmd + 1));
+#else
 
-                    if (!smoothzoomtoggle) {
-                        printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                    }
-
-                    if ( hardwareActive ) {
-                        camera->sendCommand(CAMERA_CMD_START_SMOOTH_ZOOM, zoom[zoomIDX].idx, 0);
+                for(i = 0; i < length_Zoom; i++)
+                {
+                    if( strcmp((cmd + 1), zoom[i].zoom_description) == 0)
+                    {
+                        zoomIDX = i;
+                        break;
                     }
                 }
+
+                params.set(CameraParameters::KEY_ZOOM, zoom[zoomIDX].idx);
+#endif
+
+                if ( hardwareActive )
+                    camera->setParameters(params.flatten());
+
                 break;
 
             case 'j':
-
-                a = checkSupportedParamScript(exposureMode, numExposureMode, cmd);
-                if (a > -1) {
-                    params.set(KEY_EXPOSURE, (cmd + 1));
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
+                params.set(KEY_EXPOSURE, (cmd + 1));
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
@@ -1106,12 +780,7 @@ int execute_functional_script(char *script) {
                 break;
 
             case 'e':
-                a = checkSupportedParamScript(effectss, numEffects, cmd);
-                if (a > -1) {
-                    params.set(params.KEY_EFFECT, (cmd + 1));
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
+                params.set(params.KEY_EFFECT, (cmd + 1));
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
@@ -1119,29 +788,30 @@ int execute_functional_script(char *script) {
                 break;
 
             case 'r':
-                if (strcmp((cmd + 1), "MAX_FRAMERATE") == 0) {
-                    frameRConst = 0;
-                    for (int i=0; i<constCnt; i++) {
-                        if (constFramerate[frameRConst] < constFramerate[i]) {
-                            frameRConst = i;
-                        }
-                    }
-                    if (0 < constFramerate[frameRConst]) {
-                        params.set(CameraParameters::KEY_PREVIEW_FPS_RANGE, fps_const_str[frameRConst]);
-                        frameRateIDX = frameRConst;
-                        printf("Framerate set: %d fps\n", constFramerate[frameRConst]);
-                    } else {
-                        printf("\nFramerate is 0!\n");
+
+                frameR = atoi(cmd + 1);
+
+
+                if (camera_index == 0) {
+                    for (i = 0; i < length_fpsConst_Ranges; i++) {
+                        if (frameR == fpsConstRanges[i].constFramerate)
+                            frameRateIndex = i;
+
                     }
                 } else {
-                    a = checkSupportedParamScriptfpsConst(constFramerate, constCnt, cmd, &frameRConst);
-                    if (a > -1) {
-                        params.set(CameraParameters::KEY_PREVIEW_FPS_RANGE, fps_const_str[frameRConst]);
-                        frameRateIDX = frameRConst;
-                    } else {
-                        printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
+                    for (i = 0; i < length_fpsConst_RangesSec; i++) {
+                        if (frameR == fpsConstRangesSec[i].constFramerate)
+                            frameRateIndex = i;
                     }
                 }
+
+
+                if (camera_index == 0)
+                    params.set(CameraParameters::KEY_PREVIEW_FPS_RANGE, fpsConstRanges[frameRateIndex].range);
+                else
+                    params.set(CameraParameters::KEY_PREVIEW_FPS_RANGE, fpsConstRangesSec[frameRateIndex].range);
+
+
                 if ( hardwareActive && previewRunning ) {
                     camera->stopPreview();
                     camera->setParameters(params.flatten());
@@ -1149,40 +819,40 @@ int execute_functional_script(char *script) {
                 } else if ( hardwareActive ) {
                     camera->setParameters(params.flatten());
                 }
+
                 break;
 
             case 'R':
-                a = checkSupportedParamScriptfpsRange(rangeDescription, rangeCnt, cmd, &frameRRange);
-                if (a > -1) {
-                    params.set(CameraParameters::KEY_PREVIEW_FPS_RANGE, fps_range_str[frameRRange]);
-                    fpsRangeIdx = frameRRange;
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
+                for(i = 0; i < length_fps_ranges; i++)
+                {
+                    if( strcmp((cmd + 1), fpsRanges[i].rangeDescription) == 0)
+                    {
+                        fpsRangeIdx = i;
+                        printf("Selected Framerate range: %s\n", fpsRanges[i].rangeDescription);
+                        if ( hardwareActive ) {
+                            params.set(CameraParameters::KEY_PREVIEW_FPS_RANGE, fpsRanges[i].range);
+                            params.remove(CameraParameters::KEY_PREVIEW_FRAME_RATE);
+                            camera->setParameters(params.flatten());
+                        }
+                        break;
+                    }
                 }
                 break;
 
             case 'x':
-                a = checkSupportedParamScript(antiband, numAntibanding, cmd);
-                if (a > -1) {
                 params.set(params.KEY_ANTIBANDING, (cmd + 1));
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
+
                 break;
 
             case 'g':
-                a = checkSupportedParamScript(focus, numfocus, cmd);
-                if (a > -1) {
-                    params.set(params.KEY_FOCUS_MODE, (cmd + 1));
-                } else {
-                    printf("\nNot supported parameter %s from sensor %d\n\n", cmd + 1, camera_index);
-                }
+                params.set(params.KEY_FOCUS_MODE, (cmd + 1));
 
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
+
                 break;
 
             case 'G':
@@ -1192,17 +862,7 @@ int execute_functional_script(char *script) {
                 if ( hardwareActive )
                     camera->setParameters(params.flatten());
 
-                break;
-
-            case 'y':
-
-                params.set(CameraParameters::KEY_METERING_AREAS, (cmd + 1));
-
-                if ( hardwareActive ) {
-                    camera->setParameters(params.flatten());
-                }
-
-                break;
+                params.remove(CameraParameters::KEY_FOCUS_AREAS);
 
             case 'f':
                 gettimeofday(&autofocus_start, 0);
@@ -1213,94 +873,14 @@ int execute_functional_script(char *script) {
                 break;
 
             case 'p':
-            {
-                int msgType = 0;
-                const char *format = params.getPictureFormat();
-
-                if((0 == strcmp(modevalues[capture_mode], "video-mode")) &&
-                   (0 != strcmp(videosnapshotstr, "true"))) {
-                    printf("Video Snapshot is not supported\n");
-                } else if ( hardwareActive ) {
-                    if((NULL != format) && isRawPixelFormat(format)) {
-                        createBufferOutputSource();
-                        if (bufferSourceOutputThread.get()) {
-                            bufferSourceOutputThread->setBuffer(shotParams);
-                            bufferSourceOutputThread->setStreamCapture(streamCapture, expBracketIdx);
-                        }
-                    } else if(strcmp(modevalues[capture_mode], "video-mode") == 0) {
-                        msgType = CAMERA_MSG_COMPRESSED_IMAGE |
-                                  CAMERA_MSG_RAW_IMAGE;
-#ifdef OMAP_ENHANCEMENT_BURST_CAPTURE
-                        msgType |= CAMERA_MSG_RAW_BURST;
-#endif
-                    } else {
-                        msgType = CAMERA_MSG_POSTVIEW_FRAME |
-                                  CAMERA_MSG_RAW_IMAGE_NOTIFY |
-                                  CAMERA_MSG_COMPRESSED_IMAGE |
-                                  CAMERA_MSG_SHUTTER;
-#ifdef OMAP_ENHANCEMENT_BURST_CAPTURE
-                        msgType |= CAMERA_MSG_RAW_BURST;
-#endif
-                    }
-
-                    gettimeofday(&picture_start, 0);
-                    ret = camera->setParameters(params.flatten());
-                    if ( ret != NO_ERROR ) {
-                        printf("Error returned while setting parameters");
-                        break;
-                    }
-                    ret = camera->takePictureWithParameters(msgType, shotParams.flatten());
-                    if ( ret != NO_ERROR ) {
-                        printf("Error returned while taking a picture");
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case 'S':
-            {
-                if (streamCapture) {
-                    streamCapture = false;
-                    expBracketIdx = BRACKETING_IDX_DEFAULT;
-                    setDefaultExpGainPreset(shotParams, expBracketIdx);
-                    // Stop streaming
-                    if (bufferSourceOutputThread.get()) {
-                        bufferSourceOutputThread->setStreamCapture(streamCapture, expBracketIdx);
-                    }
-                } else {
-                    streamCapture = true;
-                    expBracketIdx = BRACKETING_IDX_STREAM;
-                    setSingleExpGainPreset(shotParams, expBracketIdx, 0, 0);
-                    // Queue more frames initially
-                    shotParams.set(ShotParameters::KEY_BURST, BRACKETING_STREAM_BUFFERS);
-                }
-                break;
-            }
-
-            case 'P':
-            {
-                int msgType = CAMERA_MSG_COMPRESSED_IMAGE;
-                ShotParameters reprocParams;
-
                 gettimeofday(&picture_start, 0);
 
-                createBufferInputSource();
+                if ( hardwareActive )
+                    ret = camera->takePicture(CAMERA_MSG_COMPRESSED_IMAGE|CAMERA_MSG_RAW_IMAGE);
 
-                if (bufferSourceOutputThread.get() &&
-                    bufferSourceOutputThread->hasBuffer())
-                {
-                    bufferSourceOutputThread->setStreamCapture(false, expBracketIdx);
-                    if (hardwareActive) camera->setParameters(params.flatten());
-
-                    if (bufferSourceInput.get()) {
-                        buffer_info_t info = bufferSourceOutputThread->popBuffer();
-                        bufferSourceInput->setInput(info, params.getPictureFormat(), reprocParams);
-                        if (hardwareActive) camera->reprocess(msgType, String8());
-                    }
-                }
+                if ( ret != NO_ERROR )
+                    printf("Error returned while taking a picture");
                 break;
-            }
 
             case 'd':
                 dly = atoi(cmd + 1);
@@ -1400,14 +980,12 @@ int execute_functional_script(char *script) {
 
             case 'X':
             {
-                char rem_str[384];
-                printf("Deleting images from %s \n", images_dir_path);
-                if (!sprintf(rem_str, "rm %s/*.jpg", images_dir_path)) {
+                char rem_str[50];
+                printf("Deleting images from %s \n", dir_path);
+                if(!sprintf(rem_str,"rm %s/*.jpg",dir_path))
                     printf("Sprintf Error");
-                }
-                if (system(rem_str)) {
+                if(system(rem_str))
                     printf("Images were not deleted\n");
-                }
                 break;
             }
 
@@ -1417,89 +995,24 @@ int execute_functional_script(char *script) {
                 if ( AutoConvergenceModeIDX < 0 || AutoConvergenceModeIDX > 4 )
                     AutoConvergenceModeIDX = 0;
                 params.set(KEY_AUTOCONVERGENCE, autoconvergencemode[AutoConvergenceModeIDX]);
-                if (AutoConvergenceModeIDX != 4) {
-                    params.set(KEY_MANUAL_CONVERGENCE, manualConv);
-                }
-                if (hardwareActive) {
+                if ( AutoConvergenceModeIDX != 4 )
+                    params.set(KEY_MANUALCONVERGENCE_VALUES, manualconvergencevalues[ManualConvergenceDefaultValueIDX]);
+                if ( hardwareActive )
                     camera->setParameters(params.flatten());
-                }
                 break;
             }
 
             case '^':
-                if (strcmp(autoconvergencemode[AutoConvergenceModeIDX], "manual") == 0) {
-                    manC = atoi(cmd + 1);
-                    if(manC >= manualConvMin  &&  manC <= manualConvMax)
-                    {
-                        params.set(KEY_MANUAL_CONVERGENCE, manC);
-                    }
-                    else if(manC < manualConvMin)
-                    {
-                        printf(" wrong parameter for manual convergence \n");
-                        params.set(KEY_MANUAL_CONVERGENCE, manualConvMin);
-                    }
-                    else
-                    {
-                        printf(" wrong parameter for manual convergence \n");
-                        params.set(KEY_MANUAL_CONVERGENCE, manualConvMax);
-                    }
+            {
+                char strtmpval[7];
+                if ( strcmp (autoconvergencemode[AutoConvergenceModeIDX], AUTOCONVERGENCE_MODE_MANUAL) == 0) {
+                    sprintf(strtmpval,"%d", atoi(cmd + 1));
+                    params.set(KEY_MANUALCONVERGENCE_VALUES, strtmpval);
                     if ( hardwareActive )
                         camera->setParameters(params.flatten());
                 }
                 break;
-
-
-            case 'Q':
-                if ( strcmp (exposureMode[exposure_mode], "manual") == 0) {
-                    manE = atoi(cmd + 1);
-                    if(manE >= manualExpMin  &&  manE <= manualExpMax)
-                    {
-                        params.set(KEY_MANUAL_EXPOSURE, manE);
-                        params.set(KEY_MANUAL_EXPOSURE_RIGHT, manE);
-                    }
-                    else if(manE < manualExpMin)
-                    {
-                        printf(" wrong parameter for manual exposure \n");
-                        params.set(KEY_MANUAL_EXPOSURE, manualExpMin);
-                        params.set(KEY_MANUAL_EXPOSURE_RIGHT, manualExpMin);
-                    }
-                    else
-                    {
-                        printf(" wrong parameter for manual exposure \n");
-                        params.set(KEY_MANUAL_EXPOSURE, manualExpMax);
-                        params.set(KEY_MANUAL_EXPOSURE_RIGHT, manualExpMax);
-                    }
-
-                    if ( hardwareActive )
-                    camera->setParameters(params.flatten());
-                }
-                break;
-
-            case ',':
-                if ( strcmp (exposureMode[exposure_mode], "manual") == 0) {
-                    manG = atoi(cmd + 1);
-                    if(manG >= manualGainMin  &&  manG <= manualGainMax)
-                    {
-                        params.set(KEY_MANUAL_GAIN_ISO, manG);
-                        params.set(KEY_MANUAL_GAIN_ISO_RIGHT, manG);
-                    }
-                    else if(manG < manualGainMin)
-                    {
-                        printf(" wrong parameter for manual gain \n");
-                        params.set(KEY_MANUAL_GAIN_ISO, manualGainMin);
-                        params.set(KEY_MANUAL_GAIN_ISO_RIGHT, manualGainMin);
-                    }
-                    else
-                    {
-                        printf(" wrong parameter for manual gain \n");
-                        params.set(KEY_MANUAL_GAIN_ISO, manualGainMax);
-                        params.set(KEY_MANUAL_GAIN_ISO_RIGHT, manualGainMax);
-                    }
-
-                    if ( hardwareActive )
-                    camera->setParameters(params.flatten());
-                }
-                break;
+            }
 
             default:
                 printf("Unrecognized command!\n");
@@ -1521,66 +1034,6 @@ exit:
 }
 
 
-int checkSupportedParamScript(char **array, int size, char *param) {
-    for (int i=0; i<size; i++) {
-        if (strcmp((param + 1), array[i]) == 0) {
-            return 0;
-        }
-    }
-    return -1;
-}
-
-int checkSupportedParamScriptLayout(char **array, int size, char *param, int *index) {
-    for (int i=0; i<size; i++) {
-        if (strcmp((param + 1), array[i]) == 0) {
-            *index = i;
-            return 0;
-        }
-    }
-    return -1;
-}
-
-int checkSupportedParamScriptResol(param_Array **array, int size, char *param, int *num) {
-    for (int i=0; i<size; i++) {
-        if (strcmp((param + 1), array[i]->name) == 0) {
-            *num = i;
-            return 0;
-        }
-    }
-    return -1;
-}
-
-int checkSupportedParamScriptResol(param_Array **array, int size,
-                                   int width, int height, int *num) {
-    for (int i=0; i<size; i++) {
-        if ((width == array[i]->width) && (height == array[i]->height)) {
-            *num = i;
-            return 0;
-        }
-    }
-    return -1;
-}
-
-int checkSupportedParamScriptfpsConst(int *array, int size, char *param, int *num) {
-    for (int i=0; i<size; i++) {
-        if (atoi(param + 1) == array[i]) {
-            *num = i;
-            return 0;
-        }
-    }
-    return -1;
-}
-
-int checkSupportedParamScriptfpsRange(char **array, int size, char *param, int *num) {
-    for (int i=0; i<size; i++) {
-        if (strcmp(param + 1, array[i]) == 0) {
-            *num = i;
-            return 0;
-        }
-    }
-    return -1;
-}
-
 char * get_cycle_cmd(const char *aSrc) {
     unsigned ind = 0;
     char *cycle_cmd = new char[256];
@@ -1598,19 +1051,48 @@ status_t dump_mem_status() {
   return system(MEMORY_DUMP);
 }
 
-char *load_script(const char *config) {
+char *load_script(char *config) {
     FILE *infile;
     size_t fileSize;
     char *script;
     size_t nRead = 0;
+    char dir_name[40];
+    size_t count;
+    char rCount [5];
+
+    count = 0;
 
     infile = fopen(config, "r");
 
     strcpy(script_name,config);
 
-    printf("\n SCRIPT : <%s> is currently being executed \n", script_name);
+    // remove just the '.txt' part of the config
+    while((config[count] != '.') && (count < sizeof(dir_name)/sizeof(dir_name[0])))
+        count++;
 
-    printf("\n DIRECTORY CREATED FOR TEST RESULT IMAGES IN MMC CARD : %s \n", output_dir_path);
+    printf("\n SCRIPT : <%s> is currently being executed \n",script_name);
+    if(strncpy(dir_name,config,count) == NULL)
+        printf("Strcpy error");
+
+    dir_name[count]=NULL;
+
+    if(strcat(dir_path,dir_name) == NULL)
+        printf("Strcat error");
+
+    if(restartCount)
+    {
+      sprintf(rCount,"_%d",restartCount);
+      if(strcat(dir_path, rCount) == NULL)
+        printf("Strcat error RestartCount");
+    }
+
+    printf("\n COMPLETE FOLDER PATH : %s \n",dir_path);
+    if(mkdir(dir_path,0777) == -1) {
+        printf("\n Directory %s was not created \n",dir_path);
+    } else {
+        printf("\n Directory %s was created \n",dir_path);
+    }
+    printf("\n DIRECTORY CREATED FOR TEST RESULT IMAGES IN MMC CARD : %s \n",dir_name);
 
     if( (NULL == infile)){
         printf("Error while opening script file %s!\n", config);
@@ -1621,15 +1103,13 @@ char *load_script(const char *config) {
     fileSize = ftell(infile);
     fseek(infile, 0, SEEK_SET);
 
-    script = (char *) malloc(fileSize + 1);
+    script = (char *) malloc(fileSize);
 
     if ( NULL == script ) {
         printf("Unable to allocate buffer for the script\n");
 
         return NULL;
     }
-
-    memset(script, 0, fileSize + 1);
 
     if ((nRead = fread(script, 1, fileSize, infile)) != fileSize) {
         printf("Error while reading script file!\n");
@@ -1644,19 +1124,25 @@ char *load_script(const char *config) {
     return script;
 }
 
-int start_logging(int flags, int &pid) {
+int start_logging(char *config, int &pid) {
+    char dir_name[40];
+    size_t count = 0;
     int status = 0;
 
-    if (flags == 0) {
-        pid = -1;
-        return 0;
-    }
+    // remove just the '.txt' part of the config
+    while((config[count] != '.') && (count < sizeof(dir_name)/sizeof(dir_name[0])))
+        count++;
+
+    if(strncpy(dir_name,config,count) == NULL)
+        printf("Strcpy error");
+
+    dir_name[count]=NULL;
 
     pid = fork();
     if (pid == 0)
     {
         char *command_list[] = {"sh", "-c", NULL, NULL};
-        char log_cmd[1024];
+        char log_cmd[120];
         // child process to run logging
 
         // set group id of this process to itself
@@ -1665,17 +1151,13 @@ int start_logging(int flags, int &pid) {
         setpgid(getpid(), getpid());
 
         /* Start logcat */
-        if (flags & LOGGING_LOGCAT) {
-            if (!sprintf(log_cmd,"logcat > %s/log.txt &", output_dir_path)) {
-                printf(" Sprintf Error");
-            }
-        }
+        if(!sprintf(log_cmd,"logcat > /sdcard/%s/log.txt &",dir_name))
+            printf(" Sprintf Error");
 
         /* Start Syslink Trace */
-        if (flags & LOGGING_SYSLINK) {
-            if (!sprintf(log_cmd,"%s /system/bin/syslink_trace_daemon.out -l %s/syslink_trace.txt -f &", log_cmd, output_dir_path)) {
+        if(bLogSysLinkTrace) {
+            if(!sprintf(log_cmd,"%s /system/bin/syslink_trace_daemon.out -l /sdcard/%s/syslink_trace.txt -f &",log_cmd, dir_name))
                 printf(" Sprintf Error");
-            }
         }
 
         command_list[2] = (char *)log_cmd;
@@ -1697,22 +1179,18 @@ int start_logging(int flags, int &pid) {
     return 0;
 }
 
-int stop_logging(int flags, int &pid)
+int stop_logging(int &pid)
 {
-    if (pid > 0) {
-        if (killpg(pid, SIGKILL)) {
+    if(pid > 0)
+    {
+        if(killpg(pid, SIGKILL))
+        {
             printf("Exit command failed");
             return -1;
         } else {
-            printf("\nlogging for script %s is complete\n", script_name);
-
-            if (flags & LOGGING_LOGCAT) {
-                printf("   logcat saved @ location: %s\n", output_dir_path);
-            }
-
-            if (flags & LOGGING_SYSLINK) {
-                printf("   syslink_trace is saved @ location: %s\n\n", output_dir_path);
-            }
+            printf("\nlogging for script %s is complete\n   logcat saved @ location: %s\n",script_name,dir_path);
+            if (bLogSysLinkTrace)
+                printf("   syslink_trace is saved @ location: %s\n\n",dir_path);
         }
     }
     return 0;
