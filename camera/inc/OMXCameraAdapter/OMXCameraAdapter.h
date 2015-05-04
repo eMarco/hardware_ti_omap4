@@ -579,7 +579,7 @@ private:
                                 const OMX_BOOL data, const char *msg);
     status_t setParameter3ABoolInvert(const OMX_INDEXTYPE omx_idx,
                                       const OMX_BOOL data, const char *msg);
-#ifndef OMAP_TUNA
+#if !defined(MOTOROLA_CAMERA) && !defined(OMAP_TUNA) //this needs review
     status_t setAlgoExternalGamma(Gen3A_settings& Gen3A);
 #ifndef MOTOROLA_CAMERA
     status_t setAlgoNSF1(Gen3A_settings& Gen3A);
@@ -591,6 +591,7 @@ private:
     //Gamma table
     void updateGammaTable(const char* gamma);
     status_t setGammaTable(Gen3A_settings& Gen3A);
+#endif
 #endif
 
     status_t getEVCompensation(Gen3A_settings& Gen3A);
@@ -790,10 +791,8 @@ private:
                                   camera_request_memory allocator) const;
 #endif
 
-#ifndef OMAP_TUNA
     // Mechanical Misalignment Correction
     status_t setMechanicalMisalignmentCorrection(bool enable);
-#endif
 
     // DCC file data save
     status_t initDccFileDataSave(OMX_HANDLETYPE* omxHandle, int portIndex);

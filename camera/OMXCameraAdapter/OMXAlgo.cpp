@@ -1221,11 +1221,10 @@ status_t OMXCameraAdapter::setVFramerate(OMX_U32 minFrameRate, OMX_U32 maxFrameR
     return ret;
  }
 
-#ifndef OMAP_TUNA
 status_t OMXCameraAdapter::setMechanicalMisalignmentCorrection(const bool enable)
 {
     status_t ret = NO_ERROR;
-#ifndef MOTOROLA_CAMERA
+#if !defined(MOTOROLA_CAMERA) && !defined(OMAP_TUNA)
     OMX_ERRORTYPE eError = OMX_ErrorNone;
     OMX_TI_CONFIG_MM mm;
 

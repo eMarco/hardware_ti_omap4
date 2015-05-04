@@ -462,12 +462,8 @@ typedef enum OMX_BRACKETMODETYPE {
     OMX_BracketFlashPower,
     OMX_BracketAperture,
     OMX_BracketTemporal,
-#ifdef OMAP_ENHANCEMENT
     OMX_BracketExposureGainAbsolute,
-#endif
-#ifndef OMAP_TUNA
     OMX_BracketVectorShot,
-#endif
     OMX_BrackerTypeKhronosExtensions = 0x6f000000,
     OMX_BrackerTypeVendorStartUnused = 0x7f000000,
     OMX_BracketTypeMax = 0x7FFFFFFF
@@ -530,28 +526,20 @@ typedef enum OMX_CAMOPERATINGMODETYPE {
         OMX_TI_CaptureDummy,
         OMX_TI_CaptureGestureRecognition,
         OMX_TI_CaptureImageProfileZeroShutterLag,
-#ifndef OMAP_TUNA
         OMX_TI_SinglePreview,
         OMX_TI_StereoGestureRecognition,
         OMX_TI_CPCam,
         OMX_TI_StereoVideo,
-#endif
         OMX_CaptureHighQualityVideo,
-#ifndef OMAP_TUNA
         OMX_TI_SimultaneousSensorsGesture,
         OMX_TI_CaptureVideoLowLatency,
         OMX_TI_HQBurst,
-#endif
         OMX_TI_Reprocessing,
-#ifndef OMAP_TUNA
         // Put new entries here so OMX_CamOperatingModeMax always points to
         // the last one
         OMX_TI_CamOperatingModeCount,
         OMX_CamOperatingModeMax = OMX_TI_CamOperatingModeCount - 1,
         OMX_CamOperatingMode = 0x7fffffff
-#else
-        OMX_CamOperatingModeMax = 0x7fffffff
-#endif
 } OMX_CAMOPERATINGMODETYPE;
 
 /**
@@ -1723,7 +1711,6 @@ typedef enum OMX_EXT_EXTRADATATYPE {
     OMX_TI_SEIInfoFrame2,               /**< 0x7F000026 Used for SEI message to be provided by video decoders*/
     OMX_TI_VUIInfoFrame1,               /**< 0x7F000027 Used for VUI message to be provided by video decoders */
     OMX_TI_VUIInfoFrame2,               /**< 0x7F000028 Used for VUI message to be provided by video decoders */
-#ifndef OMAP_TUNA
     OMX_TI_FaceDetectionRaw,            /**< 0x7F000029 Face detect data without face tracking calculations */
     OMX_TI_HMSGamma,                    /**< 0x7F00002A Histogram Matched for Stereo Gamma table */
     OMX_TI_ImagePyramid,                /**< 0x7F00002B Describe image piramid sizes for each level of pyramid */
@@ -1731,7 +1718,6 @@ typedef enum OMX_EXT_EXTRADATATYPE {
     OMX_TI_ExtraData_AEWBStatistics,    /**< 0x7F00002D Auto Exppsure, white balance buffer and settings for corresponding frame */
     OMX_TI_ExtraData_BSCStatistics,     /**< 0x7F00002E Boundary signal calculator statistics for corresponding frame */
     OMX_TI_ExtraData_AuxiliaryImage,    /**< 0x7F00002F Auxiliary image contains rescaled image at QVGA resolution */
-#endif
     OMX_TI_ExtraData_Count,
     OMX_TI_ExtraData_Max = OMX_TI_ExtraData_Count - 1,
     OMX_TI_ExtraData_32Bit_Patch = 0x7fffffff
@@ -2093,9 +2079,7 @@ typedef struct OMX_TI_CONFIG_FOCUSSPOTWEIGHTINGTYPE {
  */
 typedef enum OMX_TI_EXTEXPOSURECONTROLTYPE {
     OMX_TI_ExposureControlVeryLong = OMX_ExposureControlVendorStartUnused + 1,
-#ifndef OMAP_TUNA
     OMX_TI_ExposureControlFacePriority,
-#endif
     OMX_TI_ExposureControlMax = 0x7fffffff
 } OMX_TI_EXTEXPOSURECONTROLTYPE;
 
@@ -2192,10 +2176,8 @@ typedef enum OMX_TI_STEREOFRAMELAYOUTTYPE {
 	OMX_TI_StereoFrameLayout2D,
 	OMX_TI_StereoFrameLayoutTopBottom,
 	OMX_TI_StereoFrameLayoutLeftRight,
-#ifndef OMAP_TUNA
     OMX_TI_StereoFrameLayoutTopBottomSubsample,
     OMX_TI_StereoFrameLayoutLeftRightSubsample,
-#endif
 	OMX_TI_StereoFrameLayoutMax = 0x7FFFFFFF
 } OMX_TI_STEREOFRAMELAYOUTTYPE;
 
@@ -2219,10 +2201,6 @@ typedef struct OMX_TI_FRAMELAYOUTTYPE {
  * extended color format types.
  */
 typedef enum OMX_TI_COLOR_FORMATTYPE {
-#ifdef OMAP_TUNA
-	OMX_TI_COLOR_FormatYUV420PackedSemiPlanarInterlaced =
-	    (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused + 1,
-#endif
 	OMX_TI_COLOR_FormatRawBayer10bitStereo =
 	    OMX_COLOR_FormatVendorStartUnused + 2, /**< 10 bit raw for stereo */
     OMX_TI_ColorFormatTypeMax = 0x7fffffff
@@ -2549,7 +2527,6 @@ typedef struct OMX_TI_CONFIG_EXIF_TAGS {
 	OMX_U16                 usGpsDifferential;
 } OMX_TI_CONFIG_EXIF_TAGS;
 
-#ifndef OMAP_TUNA
 /**
  * The OMX_TI_SENFACING_TYPE enumeration is used to define the
  * sensor facing.
@@ -2559,7 +2536,6 @@ typedef enum OMX_TI_SENFACING_TYPE {
     OMX_TI_SENFACING_BACK,
     OMX_TI_SENFACING_MAX = 0x7FFFFFFF
 }OMX_TI_SENFACING_TYPE;
-#endif
 
 /**
  * Structure used to configure current OMX_TI_SENMOUNT_TYPE
@@ -2779,12 +2755,11 @@ typedef struct OMX_TI_CAPTYPE {
 	OMX_BOOL                        bRawJpegSupported;      // Flag showing if the Raw + Jpeg issupported
 	OMX_U16                         ulImageCodingFormatCount;
 	OMX_IMAGE_CODINGTYPE            eImageCodingFormat[32];
-#endif
 	OMX_U16                         uSenNativeResWidth;
 	OMX_U16                         uSenNativeResHeight;
+#endif
         OMX_U16                        ulAlgoAreasFocusCount;
         OMX_U16                        ulAlgoAreasExposureCount;
-#ifndef OMAP_TUNA
     OMX_BOOL                       bAELockSupported;
     OMX_BOOL                       bAWBLockSupported;
     OMX_BOOL                       bAFLockSupported;
@@ -2795,9 +2770,7 @@ typedef struct OMX_TI_CAPTYPE {
     OMX_TI_STEREOFRAMELAYOUTTYPE   eCapFrameLayout[16];
     OMX_BOOL                       bVideoNoiseFilterSupported;
     OMX_BOOL                       bVideoStabilizationSupported;
-#endif
     OMX_BOOL                       bStillCapDuringVideoSupported;
-#ifndef OMAP_TUNA
     OMX_BOOL                       bMechanicalMisalignmentSupported;
     OMX_BOOL                       bFacePrioritySupported;
     OMX_BOOL                       bRegionPrioritySupported;
@@ -2814,7 +2787,6 @@ typedef struct OMX_TI_CAPTYPE {
     OMX_S16                        nSharpnessMax;
     OMX_S16                        nSaturationMin;
     OMX_S16                        nSaturationMax;
-#endif
 } OMX_TI_CAPTYPE;
 
 

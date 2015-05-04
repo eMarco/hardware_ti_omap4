@@ -132,8 +132,9 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
 
     CAMHAL_LOGVB("OMX_GetHandle -0x%x sensor_index = %lu", eError, mSensorIndex);
 
+#ifndef OMAP_TUNA
     initDccFileDataSave(&mCameraAdapterParameters.mHandleComp, mCameraAdapterParameters.mPrevPortIndex);
-
+#endif
 
     eError = OMX_SendCommand(mCameraAdapterParameters.mHandleComp,
                                   OMX_CommandPortDisable,
@@ -2227,9 +2228,7 @@ status_t OMXCameraAdapter::startPreview()
     if ( OMX_ErrorNone == eError) {
         ret |= setExtraData(true, mCameraAdapterParameters.mPrevPortIndex, OMX_AncillaryData);
 #ifdef OMAP_ENHANCEMENT_CPCAM
-#ifndef OMAP_TUNA
         ret |= setExtraData(true, OMX_ALL, OMX_TI_VectShotInfo);
-#endif
 #endif
 #ifdef CAMERAHAL_OMX_PROFILING
         if ( UNLIKELY( mDebugProfile ) ) {
@@ -3597,7 +3596,9 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
             }
         }
 
+#ifndef OMAP_TUNA
         sniffDccFileDataSave(pBuffHeader);
+#endif
 
         stat |= advanceZoom();
 
@@ -4421,7 +4422,6 @@ public:
             }
 
 #ifdef OMAP_ENHANCEMENT_CPCAM
-#ifndef OMAP_TUNA
             CAMHAL_LOGD("Camera mode: CPCAM ");
             properties->setMode(MODE_CPCAM);
             err = fetchCapabiltiesForMode(OMX_TI_CPCam,
@@ -4430,7 +4430,6 @@ public:
             if ( NO_ERROR != err ) {
                 return err;
             }
-#endif
 #endif
 
 #ifdef CAMERAHAL_OMAP5_CAPTURE_MODES

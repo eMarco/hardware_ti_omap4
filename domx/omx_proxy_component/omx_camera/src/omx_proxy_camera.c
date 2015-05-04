@@ -140,6 +140,7 @@ EXIT:
    return eError;
 }
 
+#ifndef OMAP_TUNA
 /* ===========================================================================*/
 /**
  * @name _OMX_CameraVtcAllocateMemory
@@ -229,6 +230,7 @@ EXIT:
    DOMX_EXIT("eError: %d", eError);
    return eError;
 }
+#endif
 
 static OMX_ERRORTYPE ComponentPrivateDeInit(OMX_IN OMX_HANDLETYPE hComponent)
 {
@@ -310,12 +312,14 @@ static OMX_ERRORTYPE Camera_SendCommand(OMX_IN OMX_HANDLETYPE hComponent,
     if ((eCmd == OMX_CommandStateSet) &&
         (nParam == (OMX_STATETYPE) OMX_StateIdle))
     {
+#ifndef OMAP_TUNA
         /* Allocate memory for Video VTC usecase, if applicable. */
         eError = _OMX_CameraVtcAllocateMemory(hComponent);
         if (eError != OMX_ErrorNone) {
             DOMX_ERROR("DOMX: _OMX_CameraVtcAllocateMemory completed with error 0x%x\n", eError);
             goto EXIT;
         }
+#endif
 #ifdef USES_LEGACY_DOMX_DCC
         if (!dcc_loaded)
         {
@@ -511,12 +515,14 @@ static OMX_ERRORTYPE CameraSetParam(OMX_IN OMX_HANDLETYPE
 
     switch (nParamIndex)
     {
+#ifndef OMAP_TUNA
 	case OMX_TI_IndexParamComponentBufferAllocation:
              eError = GLUE_CameraSetParam(hComponent,
                                           nParamIndex,
                                           pComponentParameterStructure);
 		goto EXIT;
 		break;
+#endif
 	default:
 		 break;
 	}
