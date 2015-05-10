@@ -90,7 +90,7 @@ char   *tComponentName[MAXCOMP][MAX_ROLES] =
       "video_decoder.mpeg2",
       "video_decoder.svc",
       "video_decoder.sorspk",
-      "video_decoder.mjpeg", NULL},
+      "video_decoder.mjpeg", NULL },
     { "OMX.TI.DUCATI1.VIDEO.DECODER.secure",
       "video_decoder.mpeg4",
       "video_decoder.avc",

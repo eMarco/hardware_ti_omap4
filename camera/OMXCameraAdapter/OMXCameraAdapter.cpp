@@ -131,8 +131,7 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
     mComponentState = OMX_StateLoaded;
 
     CAMHAL_LOGVB("OMX_GetHandle -0x%x sensor_index = %lu", eError, mSensorIndex);
-
-#ifndef OMAP_TUNA
+#ifndef CAMERAHAL_TUNA
     initDccFileDataSave(&mCameraAdapterParameters.mHandleComp, mCameraAdapterParameters.mPrevPortIndex);
 #endif
 
@@ -391,6 +390,7 @@ status_t OMXCameraAdapter::initialize(CameraProperties::Properties* caps)
 #ifndef OMAP_TUNA
     memset(&mParameters3A.mGammaTable, 0, sizeof(mParameters3A.mGammaTable));
 #endif
+
     LOG_FUNCTION_NAME_EXIT;
     return Utils::ErrorUtils::omxToAndroidError(eError);
 
@@ -1026,7 +1026,7 @@ status_t OMXCameraAdapter::setupTunnel(uint32_t SliceHeight, uint32_t EncoderHan
         CAMHAL_LOGEB("OMX_SetParameter OMX_IndexParamPortDefinition Error- %x", eError);
     }
 
-#if !defined(MOTOROLA_CAMERA) && !defined(OMAP_TUNA)
+#if !defined(MOTOROLA_CAMERA) && !defined(CAMERAHAL_TUNA)
     //Slice  Configuration
     OMX_TI_PARAM_VTCSLICE VTCSlice;
     OMX_INIT_STRUCT_PTR(&VTCSlice, OMX_TI_PARAM_VTCSLICE);
@@ -2666,6 +2666,7 @@ status_t OMXCameraAdapter::printComponentVersion(OMX_HANDLETYPE handle)
 #ifndef OMAP_TUNA
 status_t OMXCameraAdapter::setS3DFrameLayout(OMX_U32 port) const
 {
+#ifndef CAMERAHAL_TUNA
     OMX_ERRORTYPE eError = OMX_ErrorNone;
     OMX_TI_FRAMELAYOUTTYPE frameLayout;
     const OMXCameraPortParameters *cap =
@@ -2715,6 +2716,7 @@ status_t OMXCameraAdapter::setS3DFrameLayout(OMX_U32 port) const
         }
 
     LOG_FUNCTION_NAME_EXIT;
+#endif
 
     return NO_ERROR;
 }
@@ -3496,7 +3498,6 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
 
             if ( NULL != extraData ) {
                 ancillaryData = (OMX_TI_ANCILLARYDATATYPE*) extraData->data;
-
                 if ((OMX_2D_Snap == ancillaryData->eCameraView)
                     || (OMX_3D_Left_Snap == ancillaryData->eCameraView)
                     || (OMX_3D_Right_Snap == ancillaryData->eCameraView)) {
@@ -3596,7 +3597,7 @@ OMX_ERRORTYPE OMXCameraAdapter::OMXCameraAdapterFillBufferDone(OMX_IN OMX_HANDLE
             }
         }
 
-#ifndef OMAP_TUNA
+#ifndef CAMERAHAL_TUNA
         sniffDccFileDataSave(pBuffHeader);
 #endif
 
@@ -4061,6 +4062,10 @@ status_t OMXCameraAdapter::setExtraData(bool enable, OMX_U32 nPortIndex, OMX_EXT
 
     extraDataControl.nPortIndex = nPortIndex;
     extraDataControl.eExtraDataType = eType;
+#ifdef CAMERAHAL_TUNA
+	//TODO: eMarco: Enable this
+    //extraDataControl.eCameraView = OMX_2D_Prv;
+#endif
 
     if (enable) {
         extraDataControl.bEnable = OMX_TRUE;
@@ -4203,11 +4208,9 @@ OMXCameraAdapter::~OMXCameraAdapter()
     switchToLoaded();
 
     if ( mOmxInitialized ) {
-
         saveDccFileDataSave();
 
         closeDccFileDataSave();
-
         // deinit the OMX
         if ( mComponentState == OMX_StateLoaded || mComponentState == OMX_StateInvalid ) {
             // free the handle for the Camera component
@@ -4433,6 +4436,7 @@ public:
 #endif
 
 #ifdef CAMERAHAL_OMAP5_CAPTURE_MODES
+
             CAMHAL_LOGD("Camera mode: VIDEO HQ ");
             properties->setMode(MODE_VIDEO_HIGH_QUALITY);
             err = fetchCapabiltiesForMode(OMX_CaptureHighQualityVideo,

@@ -32,7 +32,7 @@ LOCAL_SHARED_LIBRARIES += \
     libstagefright_foundation
 endif
 
-LOCAL_CFLAGS +=-Wall -fno-short-enums -O0 -g -D___ANDROID___ $(ANDROID_API_CFLAGS) -fno-strict-aliasing
+LOCAL_CFLAGS +=-Wall -fno-short-enums -O0 -g -D___ANDROID___ $(ANDROID_API_CFLAGS)
 
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_TAGS:= optional

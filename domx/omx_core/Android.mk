@@ -16,7 +16,8 @@ LOCAL_SHARED_LIBRARIES := \
     liblog \
     libmm_osal
 
-LOCAL_CFLAGS += -DSTATIC_TABLE -D_Android -DCHECK_SECURE_STATE -fno-strict-aliasing
+LOCAL_CFLAGS += -DSTATIC_TABLE -D_Android -DCHECK_SECURE_STATE
+LOCAL_CFLAGS += -fno-strict-aliasing
 LOCAL_MODULE:= libOMX_Core
 LOCAL_MODULE_TAGS:= optional
 include $(BUILD_HEAPTRACKED_SHARED_LIBRARY)

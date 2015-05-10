@@ -42,7 +42,8 @@ LOCAL_C_INCLUDES += \
     $(HARDWARE_TI_OMAP4_BASE)/domx/mm_osal/inc
 endif
 
-LOCAL_CFLAGS += -fno-short-enums $(ANDROID_API_CFLAGS) -fno-strict-aliasing
+LOCAL_CFLAGS += -fno-short-enums $(ANDROID_API_CFLAGS)
+LOCAL_CFLAGS += -fno-strict-aliasing
 
 ifdef TI_UTILS_MESSAGE_QUEUE_DEBUG_ENABLED
     # Enable debug logs

@@ -79,7 +79,7 @@ const char OMXCameraAdapter::DEFAULT_WB[] = "auto";
 const char OMXCameraAdapter::DEFAULT_ZOOM[] = "0";
 const char OMXCameraAdapter::DEFAULT_MAX_FD_HW_FACES[] = __STRINGIFY(MAX_NUM_FACES_SUPPORTED);
 const char OMXCameraAdapter::DEFAULT_MAX_FD_SW_FACES[] = "0";
-#ifdef OMAP_TUNA
+#ifdef CAMERAHAL_TUNA
 const char OMXCameraAdapter::DEFAULT_FOCAL_LENGTH_PRIMARY[] = "3.43";
 const char OMXCameraAdapter::DEFAULT_FOCAL_LENGTH_SECONDARY[] = "1.95";
 #endif

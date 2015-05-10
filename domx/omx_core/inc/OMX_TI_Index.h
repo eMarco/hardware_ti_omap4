@@ -204,7 +204,7 @@ typedef enum OMX_TI_INDEXTYPE {
     OMX_TI_IndexConfigAVCHRDBufferSizeSetting,          /**< 0x7F00006F reference: OMX_TI_VIDEO_CONFIG_AVCHRDBUFFERSETTING */
     OMX_TI_IndexConfigFocusDistance,                    /**< 0x7F000070 reference: OMX_TI_CONFIG_FOCUSDISTANCETYPE */
     OMX_TI_IndexUseNativeBuffers,                       /**< 0x7F000071 reference: OMX_TI_ParamUseNativeBuffer(used only in proxy) */
-#ifdef OMAP_TUNA
+#ifdef DOMX_TUNA
     OMX_TI_IndexParamUseEnhancedPortReconfig,           /**< 0x7F000072 reference: OMX_TI_IndexParamUseEnhancedPortReconfig */
     OMX_TI_IndexEncoderStoreMetadatInBuffers,           /**< 0x7F000073 reference:  */
     OMX_TI_IndexParamZslHistoryLen,                     /**< 0x7F000074 reference: OMX_TI_PARAM_ZSLHISTORYLENTYPE */
@@ -239,6 +239,7 @@ typedef enum OMX_TI_INDEXTYPE {
     OMX_TI_IndexConfigVideoSvcLayerDetails,             /**< 0x7F000085 reference: OMX_TI_VIDEO_CONFIG_SVCLAYERDETAILS */
     OMX_TI_IndexConfigVideoSvcTargetLayer,              /**< 0x7F000086 reference: OMX_TI_VIDEO_CONFIG_SVCTARGETLAYER */
     OMX_TI_IndexConfigZslFremeSelectPrio,               /**< 0x7F000087 reference: OMX_TI_CONFIG_ZSLFRAMESELECTPRIOTYPE */
+
     OMX_TI_IndexUseBufferDescriptor,                    /**< 0x7F000088 reference: OMX_TI_PARAM_USEBUFFERDESCRIPTOR */
     OMX_TI_IndexParamVtcSlice,                          /**< 0x7F000089 reference: OMX_TI_PARAM_VTCSLICE */
 

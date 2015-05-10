@@ -140,7 +140,7 @@ EXIT:
    return eError;
 }
 
-#ifndef OMAP_TUNA
+#ifndef DOMX_TUNA
 /* ===========================================================================*/
 /**
  * @name _OMX_CameraVtcAllocateMemory
@@ -262,6 +262,7 @@ static OMX_ERRORTYPE ComponentPrivateDeInit(OMX_IN OMX_HANDLETYPE hComponent)
                 OMX_ErrorInsufficientResources, "Mutex release failed");
         }
 #endif
+
         OMX_CameraVtcFreeMemory(hComponent);
 
 
@@ -276,7 +277,6 @@ static OMX_ERRORTYPE ComponentPrivateDeInit(OMX_IN OMX_HANDLETYPE hComponent)
                 pCamPrv->gComponentBufferAllocation[i][j] = NULL;
             }
         }
-
 
         TIMM_OSAL_Free(pCompPrv->pCompProxyPrv);
         pCompPrv->pCompProxyPrv = NULL;
@@ -312,7 +312,7 @@ static OMX_ERRORTYPE Camera_SendCommand(OMX_IN OMX_HANDLETYPE hComponent,
     if ((eCmd == OMX_CommandStateSet) &&
         (nParam == (OMX_STATETYPE) OMX_StateIdle))
     {
-#ifndef OMAP_TUNA
+#ifndef DOMX_TUNA
         /* Allocate memory for Video VTC usecase, if applicable. */
         eError = _OMX_CameraVtcAllocateMemory(hComponent);
         if (eError != OMX_ErrorNone) {
@@ -399,7 +399,7 @@ static OMX_ERRORTYPE CameraGetConfig(OMX_IN OMX_HANDLETYPE
 	case OMX_TI_IndexConfigCamCapabilities:
 	case OMX_TI_IndexConfigExifTags:
 	case OMX_TI_IndexConfigAlgoAreas:
-#ifndef OMAP_TUNA
+#ifndef DOMX_TUNA
 	case OMX_TI_IndexConfigGammaTable:
         case OMX_TI_IndexConfigDynamicCameraDescriptor:
 #endif
@@ -464,7 +464,7 @@ static OMX_ERRORTYPE CameraSetConfig(OMX_IN OMX_HANDLETYPE
 	case OMX_TI_IndexConfigCamCapabilities:
 	case OMX_TI_IndexConfigExifTags:
 	case OMX_TI_IndexConfigAlgoAreas:
-#ifndef OMAP_TUNA
+#ifndef DOMX_TUNA
 	case OMX_TI_IndexConfigGammaTable:
         case OMX_TI_IndexConfigDynamicCameraDescriptor:
 #endif
@@ -515,7 +515,7 @@ static OMX_ERRORTYPE CameraSetParam(OMX_IN OMX_HANDLETYPE
 
     switch (nParamIndex)
     {
-#ifndef OMAP_TUNA
+#ifndef DOMX_TUNA
 	case OMX_TI_IndexParamComponentBufferAllocation:
              eError = GLUE_CameraSetParam(hComponent,
                                           nParamIndex,
@@ -603,6 +603,7 @@ OMX_ERRORTYPE OMX_ComponentInit(OMX_HANDLETYPE hComponent)
                 pCamPrv->gComponentBufferAllocation[i][j] = NULL;
             }
         }
+
 	pHandle->ComponentDeInit = ComponentPrivateDeInit;
 	pHandle->GetConfig = CameraGetConfig;
 	pHandle->SetConfig = CameraSetConfig;

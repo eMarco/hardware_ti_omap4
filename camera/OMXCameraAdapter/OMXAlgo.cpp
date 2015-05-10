@@ -229,6 +229,7 @@ status_t OMXCameraAdapter::setParametersAlgo(const android::CameraParameters &pa
         }
 
 #ifdef OMAP_ENHANCEMENT
+
     //Set Auto Convergence Mode
     valstr = params.get((const char *) TICameraParameters::KEY_AUTOCONVERGENCE_MODE);
     valManualStr = params.get(TICameraParameters::KEY_MANUAL_CONVERGENCE);
@@ -254,6 +255,7 @@ status_t OMXCameraAdapter::setParametersAlgo(const android::CameraParameters &pa
         }
 #endif
     }
+
 #endif
 
     LOG_FUNCTION_NAME_EXIT;
@@ -715,7 +717,7 @@ status_t OMXCameraAdapter::setCaptureMode(OMXCameraAdapter::CaptureMode mode)
                 }
             }
 
-#ifndef OMAP_TUNA
+#ifndef CAMERAHAL_TUNA
         if((NO_ERROR == ret) && (OMXCameraAdapter::CP_CAM == mode)) {
             //Configure Single Preview Mode
             eError =  OMX_SetConfig(mCameraAdapterParameters.mHandleComp,
@@ -728,8 +730,8 @@ status_t OMXCameraAdapter::setCaptureMode(OMXCameraAdapter::CaptureMode mode)
                 CAMHAL_LOGDA("single preview mode configured successfully");
             }
         }
-
 #endif
+
 
         if( NO_ERROR == ret )
             {
@@ -1224,7 +1226,7 @@ status_t OMXCameraAdapter::setVFramerate(OMX_U32 minFrameRate, OMX_U32 maxFrameR
 status_t OMXCameraAdapter::setMechanicalMisalignmentCorrection(const bool enable)
 {
     status_t ret = NO_ERROR;
-#if !defined(MOTOROLA_CAMERA) && !defined(OMAP_TUNA)
+#if !defined(MOTOROLA_CAMERA) && !defined(CAMERAHAL_TUNA)
     OMX_ERRORTYPE eError = OMX_ErrorNone;
     OMX_TI_CONFIG_MM mm;
 

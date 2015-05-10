@@ -953,7 +953,7 @@ static OMX_ERRORTYPE PROXY_UseBuffer(OMX_IN OMX_HANDLETYPE hComponent,
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	OMX_BOOL bSlotFound = OMX_FALSE;
 	OMX_PTR pAuxBuf0 = pBuffer;
-	//OMX_PTR pMappedMetaDataBuffer = NULL;
+	OMX_PTR pMappedMetaDataBuffer = NULL;
 	OMX_TI_PARAM_METADATABUFFERINFO tMetaDataBuffer;
 	OMX_U32 nBufferHeight = 0;
 	OMX_CONFIG_RECTTYPE tParamRect;
@@ -1038,7 +1038,6 @@ static OMX_ERRORTYPE PROXY_UseBuffer(OMX_IN OMX_HANDLETYPE hComponent,
 		((OMX_TI_PLATFORMPRIVATE *) pBufferHeader->pPlatformPrivate)->
 			pAuxBuf1 = NULL;
 	}
-
 	if(pCompPrv->proxyPortBuffers[nPortIndex].proxyBufferType == BufferDescriptorVirtual2D)
 	{
 		pAuxBuf0 = (OMX_U8 *)(((OMX_TI_BUFFERDESCRIPTOR_TYPE*)pBuffer)->pBuf[0]);
@@ -1327,7 +1326,6 @@ OMX_ERRORTYPE __PROXY_SetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 	PROXY_COMPONENT_PRIVATE *pCompPrv = NULL;
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	OMX_TI_PARAM_USEBUFFERDESCRIPTOR *ptBufDescParam = NULL;
-
 #ifdef ENABLE_GRALLOC_BUFFERS
 	OMX_TI_PARAMUSENATIVEBUFFER *pParamNativeBuffer = NULL;
 #endif
@@ -1367,8 +1365,7 @@ OMX_ERRORTYPE __PROXY_SetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 			break;
 		}
 #endif
-
-#ifndef OMAP_TUNA
+#ifndef DOMX_TUNA
 		case OMX_TI_IndexUseBufferDescriptor:
 		     ptBufDescParam = (OMX_TI_PARAM_USEBUFFERDESCRIPTOR *) pParamStruct;
 		     if(ptBufDescParam->bEnabled == OMX_TRUE)
@@ -1460,7 +1457,6 @@ OMX_ERRORTYPE __PROXY_GetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 	PROXY_COMPONENT_PRIVATE *pCompPrv = NULL;
 	OMX_COMPONENTTYPE *hComp = (OMX_COMPONENTTYPE *) hComponent;
 	OMX_TI_PARAM_USEBUFFERDESCRIPTOR *ptBufDescParam = NULL;
-
 #ifdef USE_ION
 	OMX_PTR *pAuxBuf = pLocBufNeedMap;
 	OMX_PTR pRegistered = NULL;
@@ -1478,7 +1474,7 @@ OMX_ERRORTYPE __PROXY_GetParameter(OMX_IN OMX_HANDLETYPE hComponent,
 
 	switch(nParamIndex)
 	{
-#ifndef OMAP_TUNA
+#ifndef DOMX_TUNA
 		case OMX_TI_IndexUseBufferDescriptor:
 			eRPCError = RPC_GetParameter(pCompPrv->hRemoteComp, nParamIndex, pParamStruct,
 				pLocBufNeedMap, &eCompReturn);

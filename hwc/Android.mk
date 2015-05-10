@@ -12,8 +12,14 @@ LOCAL_STATIC_LIBRARIES := libpng
 
 LOCAL_MODULE_TAGS := optional
 
-LOCAL_MODULE := hwcomposer.tuna
-LOCAL_CFLAGS := -DLOG_TAG=\"ti_hwc\" -fno-strict-aliasing
+ifeq ($(TARGET_BOOTLOADER_BOARD_NAME),tuna)
+	LOCAL_MODULE := hwcomposer.$(TARGET_BOOTLOADER_BOARD_NAME)
+else
+	LOCAL_MODULE := hwcomposer.omap4
+endif
+
+LOCAL_CFLAGS := -DLOG_TAG=\"ti_hwc\"
+LOCAL_CFLAGS += -fno-strict-aliasing
 LOCAL_C_INCLUDES += external/libpng external/zlib
 
 ifeq ($(TARGET_TI_HWC_HDMI_DISABLED),true)
