@@ -18,6 +18,8 @@ LOCAL_C_INCLUDES += \
 
 LOCAL_CFLAGS += -D_Android
 
+LOCAL_CFLAGS += -fno-strict-aliasing
+
 LOCAL_SHARED_LIBRARIES := \
 	libOMX_CoreOsal \
 	libipcutils \

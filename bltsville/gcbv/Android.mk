@@ -40,7 +40,7 @@ LOCAL_SRC_FILES := \
 	mirror/gcfilter.c \
 	mirror/gcdbglog.c
 
-LOCAL_CFLAGS :=
+LOCAL_CFLAGS := -fno-strict-aliasing
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/mirror \
