@@ -4994,16 +4994,16 @@ bool CameraHal::SetFlashLedTorch( unsigned intensity )
 void *
 camera_buffer_get_omx_ptr (CameraBuffer *buffer)
 {
-    CAMHAL_LOGV("buffer_type %d opaque %p", buffer->type, buffer->opaque);
+    CAMHAL_LOGSV("buffer_type %d opaque %p", buffer->type, buffer->opaque);
 
     if (buffer->type == CAMERA_BUFFER_ANW) {
         buffer_handle_t *handle = (buffer_handle_t *)buffer->opaque;
-        CAMHAL_LOGV("anw %08x", *handle);
+        CAMHAL_LOGSV("anw %08x", *handle);
         return (void *)*handle;
     } else if (buffer->type == CAMERA_BUFFER_ION) {
         return (void *)buffer->fd;
     } else {
-        CAMHAL_LOGV("other %08x", buffer->opaque);
+        CAMHAL_LOGSV("other %08x", buffer->opaque);
         return (void *)buffer->opaque;
     }
 }

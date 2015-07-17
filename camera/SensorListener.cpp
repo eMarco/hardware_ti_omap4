@@ -51,8 +51,8 @@ static int sensor_events_listener(int fd, int events, void* data)
                 float radius = 0;
                 int tilt = 0, orient = 0;
 
-                CAMHAL_LOGVA("ACCELEROMETER EVENT");
-                CAMHAL_LOGVB(" azimuth = %f pitch = %f roll = %f",
+                CAMHAL_LOGSVA("ACCELEROMETER EVENT");
+                CAMHAL_LOGSVB(" azimuth = %f pitch = %f roll = %f",
                              sen_events[i].vector.azimuth,
                              sen_events[i].vector.pitch,
                              sen_events[i].vector.roll);
