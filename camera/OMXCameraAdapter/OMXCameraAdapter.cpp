@@ -3871,8 +3871,8 @@ status_t OMXCameraAdapter::sendCallBacks(CameraFrame frame, OMX_IN OMX_BUFFERHEA
   frame.mOffset = pBuffHeader->nOffset;
   frame.mWidth = port->mWidth;
   frame.mHeight = port->mHeight;
-  frame.mYuv[0] = NULL;
-  frame.mYuv[1] = NULL;
+  frame.mYuv[0] = 0; //NULL;
+  frame.mYuv[1] = 0; //NULL;
 
   if ( onlyOnce && mRecording )
     {
