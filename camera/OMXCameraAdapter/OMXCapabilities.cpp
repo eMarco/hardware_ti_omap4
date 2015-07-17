@@ -2636,6 +2636,12 @@ status_t OMXCameraAdapter::getCaps(const int sensorId, CameraProperties::Propert
         CAMHAL_LOGDA("OMX capability query success");
     }
 
+#ifdef CAMERAHAL_TUNA
+    // we support video snapshots
+    // but don't advertise it
+    caps->bStillCapDuringVideoSupported = OMX_TRUE;
+#endif
+
 #ifdef CAMERAHAL_DEBUG
     _dumpOmxTiCap(sensorId, *caps);
 #endif

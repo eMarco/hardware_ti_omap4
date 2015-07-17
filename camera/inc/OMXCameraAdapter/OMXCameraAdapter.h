@@ -1030,8 +1030,6 @@ private:
 
     static const size_t MAX_FOCUS_AREAS;
 
-    static const char * DEFAULT_VIDEO_SNAPSHOT_SUPPORTED;
-
 #ifdef CAMERAHAL_OMX_PROFILING
 
     static const char DEFAULT_PROFILE_PATH[];
