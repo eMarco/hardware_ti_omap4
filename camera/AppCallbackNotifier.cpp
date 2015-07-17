@@ -63,7 +63,7 @@ void AppCallbackNotifier::EncoderDoneCb(void* main_jpeg, void* thumb_jpeg, Camer
     Encoder_libjpeg::params *main_param = NULL, *thumb_param = NULL;
     size_t jpeg_size;
     uint8_t* src = NULL;
-    CameraBuffer *camera_buffer;
+    CameraBuffer *camera_buffer = NULL;
     android::sp<Encoder_libjpeg> encoder = NULL;
 
     LOG_FUNCTION_NAME;
@@ -884,8 +884,8 @@ void AppCallbackNotifier::copyAndSendPreviewFrame(CameraFrame* frame, int32_t ms
                     memset(dest->mapped, 0, (mPreviewMemory->size / MAX_BUFFERS));
                 }
             } else {
-              if ((NULL == frame->mYuv[0]) || (NULL == frame->mYuv[1])){
-                CAMHAL_LOGEA("Error! One of the YUV Pointer is NULL");
+              if ((0 == frame->mYuv[0]) || (0 == frame->mYuv[1])){ //NULL == frame->mYuv
+                CAMHAL_LOGEA("Error! One of the YUV Pointer is 0"); //is NULL
                 goto exit;
               }
               else{
@@ -1199,13 +1199,13 @@ void AppCallbackNotifier::notifyFrame()
                                 mapper.lock((buffer_handle_t)vBuf, CAMHAL_GRALLOC_USAGE, bounds, y_uv);
                                 y_uv[1] = y_uv[0] + mVideoHeight*4096;
 
-                                structConvImage input =  {frame->mWidth,
-                                                          frame->mHeight,
+                                structConvImage input =  {(mmInt32)frame->mWidth,
+                                                          (mmInt32)frame->mHeight,
                                                           4096,
                                                           IC_FORMAT_YCbCr420_lp,
                                                           (mmByte *)frame->mYuv[0],
                                                           (mmByte *)frame->mYuv[1],
-                                                          frame->mOffset};
+                                                          (mmInt32)frame->mOffset};
 
                                 structConvImage output = {mVideoWidth,
                                                           mVideoHeight,

@@ -174,7 +174,7 @@ ifeq ($(OMAP4_CAMERA_HAL_USES),OMX)
 
 include $(CLEAR_VARS)
 
-CAMERAHAL_CFLAGS += -DOMX_CAMERA_ADAPTER
+CAMERAHAL_CFLAGS += -DOMX_CAMERA_ADAPTER -DUSE_LIBION_TI
 
 LOCAL_SRC_FILES:= \
     $(TI_CAMERAHAL_COMMON_SRC) \
@@ -185,7 +185,8 @@ LOCAL_C_INCLUDES += \
     $(DOMX_PATH)/omx_core/inc \
     $(DOMX_PATH)/mm_osal/inc \
     frameworks/native/include/media/openmax \
-    $(LOCAL_PATH)/inc/OMXCameraAdapter
+    $(LOCAL_PATH)/inc/OMXCameraAdapter \
+    system/media/camera/include
 
 LOCAL_SHARED_LIBRARIES:= \
     $(TI_CAMERAHAL_COMMON_SHARED_LIBRARIES) \
@@ -199,8 +200,13 @@ LOCAL_CFLAGS := -fno-short-enums -DCOPY_IMAGE_BUFFER $(CAMERAHAL_CFLAGS)
 
 LOCAL_CFLAGS += -fno-strict-aliasing
 
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_MODULE:= camera.$(TARGET_BOARD_PLATFORM)
+
+ifdef TI_CAMERAHAL_USES_LEGACY_DOMX_DCC
+LOCAL_CFLAGS += -DUSES_LEGACY_DOMX_DCC
+else
+LOCAL_SRC_FILES += OMXCameraAdapter/OMXDCC.cpp
+endif
+
 LOCAL_MODULE_TAGS:= optional
 
 include $(BUILD_HEAPTRACKED_SHARED_LIBRARY)

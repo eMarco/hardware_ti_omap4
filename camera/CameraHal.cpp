@@ -705,7 +705,7 @@ int CameraHal::setParameters(const android::CameraParameters& params)
             mParameters.set(android::CameraParameters::KEY_PREVIEW_FPS_RANGE, valstr);
             CAMHAL_LOGDB("FPS Range = %s", valstr);
             if ( curMaxFPS == (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) &&
-                 maxFPS < (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) ) {
+                (unsigned int) maxFPS < (FRAME_RATE_HIGH_HD * CameraHal::VFR_SCALE) ) {
                 restartPreviewRequired = true;
             }
             frameRangeUpdated = true;
