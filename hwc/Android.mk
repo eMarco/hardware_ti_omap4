@@ -12,7 +12,12 @@ LOCAL_STATIC_LIBRARIES := libpng
 
 LOCAL_MODULE_TAGS := optional
 
-LOCAL_MODULE := hwcomposer.omap4
+ifeq ($(TARGET_BOOTLOADER_BOARD_NAME),tuna)
+	LOCAL_MODULE := hwcomposer.$(TARGET_BOOTLOADER_BOARD_NAME)
+else
+	LOCAL_MODULE := hwcomposer.omap4
+endif
+
 LOCAL_CFLAGS := -DLOG_TAG=\"ti_hwc\"
 LOCAL_C_INCLUDES += external/libpng external/zlib
 

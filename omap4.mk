@@ -15,8 +15,13 @@
 # This file lists the modules that are specific to OMAP4 but are used by
 # all OMAP4 devices.
 
+ifeq ($(TARGET_BOOTLOADER_BOARD_NAME),tuna)
+PRODUCT_PACKAGES += \
+    hwcomposer.tuna
+else
 PRODUCT_PACKAGES += \
     hwcomposer.omap4
+endif
 
 PRODUCT_VENDOR_KERNEL_HEADERS := hardware/ti/omap4/kernel-headers
 
