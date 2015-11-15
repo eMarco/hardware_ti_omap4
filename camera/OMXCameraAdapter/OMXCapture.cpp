@@ -549,7 +549,6 @@ status_t OMXCameraAdapter::setVectorStop(bool toPreview)
 
     LOG_FUNCTION_NAME;
 
-#ifndef CAMERAHAL_TUNA
     OMX_INIT_STRUCT_PTR(&vecShotStop, OMX_TI_CONFIG_VECTSHOTSTOPMETHODTYPE);
 
     vecShotStop.nPortIndex = mCameraAdapterParameters.mImagePortIndex;
@@ -567,7 +566,6 @@ status_t OMXCameraAdapter::setVectorStop(bool toPreview)
     } else {
         CAMHAL_LOGDA("Bracket shot configured successfully");
     }
-#endif
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -583,7 +581,6 @@ status_t OMXCameraAdapter::initVectorShot()
 
     LOG_FUNCTION_NAME;
 
-#ifndef CAMERAHAL_TUNA
     if (NO_ERROR == ret) {
         OMX_INIT_STRUCT_PTR (&expCapMode, OMX_CONFIG_CAPTUREMODETYPE);
         expCapMode.nPortIndex = mCameraAdapterParameters.mImagePortIndex;
@@ -624,7 +621,6 @@ status_t OMXCameraAdapter::initVectorShot()
         // set vector stop method to stop in capture
         ret = setVectorStop(false);
     }
-#endif
 
  exit:
     LOG_FUNCTION_NAME_EXIT;
@@ -648,7 +644,6 @@ status_t OMXCameraAdapter::setVectorShot(int *evValues,
 
     LOG_FUNCTION_NAME;
 
-#ifndef CAMERAHAL_TUNA
     OMX_INIT_STRUCT_PTR(&enqueueShotConfigs, OMX_TI_CONFIG_ENQUEUESHOTCONFIGS);
     OMX_INIT_STRUCT_PTR(&queryAvailableShots, OMX_TI_CONFIG_QUERYAVAILABLESHOTS);
 
@@ -754,7 +749,6 @@ status_t OMXCameraAdapter::setVectorShot(int *evValues,
             CAMHAL_LOGDA("Enqueue shot configured successfully");
         }
     }
-#endif
 
  exit:
     LOG_FUNCTION_NAME_EXIT;

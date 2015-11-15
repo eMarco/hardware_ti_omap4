@@ -984,7 +984,7 @@ status_t OMXCameraAdapter::insertImageFormats(CameraProperties::Properties* para
 
     if ( NO_ERROR == ret ) {
 #ifdef CAMERAHAL_TUNA
-        //jpeg is not supported in our OMX capabilies
+        // jpeg is supported but not advertised
         if (supported[0] != '\0') {
             strncat(supported, PARAM_SEP, 1);
         }
@@ -1878,13 +1878,10 @@ status_t OMXCameraAdapter::insertGBCESupported(CameraProperties::Properties* par
     if (caps.bGbceSupported) {
         params->set(CameraProperties::SUPPORTED_GBCE,
                     android::CameraParameters::TRUE);
-    } else {
+    } else
 #endif
         params->set(CameraProperties::SUPPORTED_GBCE,
                     android::CameraParameters::FALSE);
-#ifndef CAMERAHAL_TUNA
-    }
-#endif
 
     LOG_FUNCTION_NAME_EXIT;
 
@@ -2172,11 +2169,9 @@ status_t OMXCameraAdapter::insertCapabilities(CameraProperties::Properties* para
         ret = insertFacing(params, caps);
     }
 
-#ifndef CAMERAHAL_TUNA
     if ( NO_ERROR == ret) {
         ret = insertFocalLength(params, caps);
     }
-#endif
 
     if ( NO_ERROR == ret) {
         ret = insertAutoConvergenceModes(params, caps);
@@ -2198,11 +2193,9 @@ status_t OMXCameraAdapter::insertCapabilities(CameraProperties::Properties* para
         ret = insertCaptureModes(params, caps);
     }
 
-#ifndef CAMERAHAL_TUNA
     if ( NO_ERROR == ret) {
         ret = insertLayout(params, caps);
     }
-#endif
 
     if ( NO_ERROR == ret) {
         ret = insertVideoSnapshotSupported(params, caps);
@@ -2565,6 +2558,7 @@ status_t OMXCameraAdapter::getCaps(const int sensorId, CameraProperties::Propert
         caps->nFocalLength = 279;
     }
 #endif
+
 #ifdef CAMERAHAL_TUNA
     // we support video snapshots
     // but don't advertise it
